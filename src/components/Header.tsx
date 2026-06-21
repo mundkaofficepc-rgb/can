@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Film, Search, Sparkles, Bookmark, Play, AlertCircle, ArrowLeft, Calendar, History, Trash2, X } from "lucide-react";
-import { ExpandingSearchDock } from "@/components/ui/expanding-search-dock-shadcnui";
+import { ExpandingSearchDock } from "./ui/expanding-search-dock-shadcnui";
 import { toast } from "sonner";
 
 interface HeaderProps {

@@ -1,4 +1,4 @@
-import { ExpandingSearchDock } from "@/components/ui/expanding-search-dock-shadcnui"
+import { ExpandingSearchDock } from "./ui/expanding-search-dock-shadcnui"
 
 export default function Demo() {
   return (

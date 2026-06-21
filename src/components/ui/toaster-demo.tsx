@@ -1,8 +1,8 @@
 "use client";
 
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Toaster } from "@/components/ui/sonner";
+import { Button } from "./button";
+import { Toaster } from "./sonner";
 
 export default function ToasterDemo() {
   return (

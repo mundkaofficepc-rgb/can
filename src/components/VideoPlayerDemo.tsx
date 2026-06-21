@@ -1,4 +1,4 @@
-import VideoPlayer from "@/components/ui/video-player"
+import VideoPlayer from "./ui/video-player"
 
 const VideoPlayerDemo = () => {
     return (
