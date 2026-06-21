@@ -7,6 +7,110 @@ import CinemaSensei from "./components/CinemaSensei";
 import { Movie } from "./types";
 import { Sparkles, MessageSquare, Flame, HelpCircle, GraduationCap, X, Bookmark, Film } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { curatedMovies } from "./data/curatedMovies";
+
+const TMDB_API_KEY = "1d84ab491afb8deec137b04c9f397a39";
+
+const CLIENT_GENRE_MAP: { [key: number]: string } = {
+  28: "Action",
+  12: "Adventure",
+  16: "Animation",
+  35: "Comedy",
+  80: "Crime",
+  99: "Documentary",
+  18: "Drama",
+  10751: "Family",
+  14: "Fantasy",
+  36: "History",
+  27: "Horror",
+  10402: "Music",
+  9648: "Mystery",
+  10749: "Romance",
+  878: "Sci-Fi",
+  10770: "TV Movie",
+  53: "Thriller",
+  10752: "War",
+  37: "Western",
+  10759: "Action",
+  10762: "Family",
+  10763: "Drama",
+  10764: "Reality",
+  10765: "Sci-Fi",
+  10766: "Drama",
+  10767: "Talk",
+  10768: "War"
+};
+
+async function fetchFromTMDBClient(): Promise<Movie[]> {
+  const list: Movie[] = [];
+  try {
+    const trendingRes = await fetch(`https://api.themoviedb.org/3/trending/all/week?api_key=${TMDB_API_KEY}`);
+    if (trendingRes.ok) {
+      const trendingData = await trendingRes.json();
+      const trendingItems = (trendingData.results || []).slice(0, 20).map((item: any) => {
+        const isTv = item.media_type === "tv" || !item.release_date;
+        const title = item.title || item.name || item.original_title || item.original_name;
+        const releaseDate = item.release_date || item.first_air_date || "2024-01-01";
+        const genres = (item.genre_ids || []).map((gid: number) => CLIENT_GENRE_MAP[gid]).filter((g: any) => !!g);
+        
+        return {
+          id: item.id,
+          title,
+          type: isTv ? "tv" : "movie",
+          overview: item.overview || "Plot summary not available.",
+          rating: item.vote_average || 7.0,
+          releaseDate,
+          posterUrl: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=500",
+          backdropUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : "https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1200",
+          genres: genres.length > 0 ? genres : ["Drama"],
+          trailerUrl: `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(title + " official trailer")}`,
+          duration: isTv ? "Season 1" : "2h",
+          cast: ["Featured Cast"],
+          trending: true
+        };
+      });
+      list.push(...trendingItems);
+    }
+  } catch (err) {
+    console.error("Client TMDB trending load error:", err);
+  }
+
+  try {
+    const popularRes = await fetch(`https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}`);
+    if (popularRes.ok) {
+      const popularData = await popularRes.json();
+      const popularItems = (popularData.results || []).slice(0, 10).map((item: any) => {
+        const title = item.title || item.original_title;
+        const genres = (item.genre_ids || []).map((gid: number) => CLIENT_GENRE_MAP[gid]).filter((g: any) => !!g);
+        return {
+          id: item.id,
+          title,
+          type: "movie" as const,
+          overview: item.overview || "Plot summary not available.",
+          rating: item.vote_average || 7.0,
+          releaseDate: item.release_date || "2024-01-01",
+          posterUrl: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=500",
+          backdropUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : "https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1200",
+          genres: genres.length > 0 ? genres : ["Drama"],
+          trailerUrl: `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(title + " official trailer")}`,
+          duration: "2h",
+          cast: ["Featured Cast"],
+          popular: true
+        };
+      });
+
+      for (const pi of popularItems) {
+        if (!list.some((li: any) => li.id === pi.id)) {
+          list.push(pi);
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Client TMDB popular load error:", err);
+  }
+
+  return list;
+}
 
 export default function App() {
   const [movies, setMovies] = useState<Movie[]>([]);
@@ -26,13 +130,28 @@ export default function App() {
   useEffect(() => {
     // 1. Fetch default curated movies list
     fetch("/api/movies")
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("API status not success");
+        return res.json();
+      })
       .then((data) => {
-        if (data.success) {
+        if (data.success && Array.isArray(data.movies) && data.movies.length > 0) {
           setMovies(data.movies);
+        } else {
+          throw new Error("Empty API result");
         }
       })
-      .catch((err) => console.error("Could not fetch movies database list", err));
+      .catch((err) => {
+        console.warn("Backend API movies down or static deploy. Triggering client-side TMDB / local fallback:", err);
+        fetchFromTMDBClient().then((clientMovies) => {
+          if (clientMovies.length > 0) {
+            setMovies(clientMovies);
+          } else {
+            console.warn("Client TMDB call failed as well. Splicing statically imported local curated list!");
+            setMovies(curatedMovies);
+          }
+        });
+      });
 
     // 2. Fetch config to verify API keys availability
     fetch("/api/config")
@@ -85,12 +204,60 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query }),
       });
+      if (!response.ok) throw new Error("API failure status");
       const data = await response.json();
       if (data.success && data.movies) {
         setSearchResults(data.movies);
+      } else {
+        throw new Error("No success key in response");
       }
     } catch (err) {
-      console.error("Multi-engine searching failed", err);
+      console.warn("Backend API search failed. Running client-side high matching fallback logic...", err);
+      try {
+        const url = `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query.toLowerCase().trim())}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.results)) {
+            const results = data.results
+              .filter((item: any) => item.media_type === "movie" || item.media_type === "tv")
+              .map((item: any) => {
+                const isTv = item.media_type === "tv";
+                const title = item.title || item.name || item.original_title || item.original_name;
+                const releaseDate = item.release_date || item.first_air_date || "2024-01-01";
+                const genres = (item.genre_ids || []).map((gid: number) => CLIENT_GENRE_MAP[gid]).filter((g: any) => !!g);
+
+                return {
+                  id: item.id,
+                  title,
+                  type: isTv ? "tv" : "movie",
+                  overview: item.overview || "Plot summary is not available for this title.",
+                  rating: item.vote_average || 7.0,
+                  releaseDate,
+                  posterUrl: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=500",
+                  backdropUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : "https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1200",
+                  genres: genres.length > 0 ? genres : ["Drama"],
+                  trailerUrl: `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(title + " official trailer")}`,
+                  duration: isTv ? "Season 1" : "2h",
+                  cast: ["Featured Cast"]
+                };
+              });
+            setSearchResults(results);
+            return;
+          }
+        }
+      } catch (tmdbErr) {
+        console.error("Direct client TMDB search failed too:", tmdbErr);
+      }
+
+      // Final fallback search: match statically imported curatedMovies locally
+      const localResults = curatedMovies.filter(
+        (m) =>
+          m.title.toLowerCase().includes(query.toLowerCase()) ||
+          m.overview.toLowerCase().includes(query.toLowerCase()) ||
+          m.genres.some((g) => g.toLowerCase().includes(query.toLowerCase()))
+      );
+      setSearchResults(localResults);
     } finally {
       setIsSearching(false);
     }

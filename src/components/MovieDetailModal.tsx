@@ -3,6 +3,130 @@ import { X, Star, Play, Award, HelpCircle, Film, Info, ChevronRight } from "luci
 import { Movie, TriviaResponse } from "../types";
 import { motion } from "motion/react";
 
+const TMDB_API_KEY = "1d84ab491afb8deec137b04c9f397a39";
+
+const CLIENT_GENRE_MAP: { [key: number]: string } = {
+  28: "Action",
+  12: "Adventure",
+  16: "Animation",
+  35: "Comedy",
+  80: "Crime",
+  99: "Documentary",
+  18: "Drama",
+  10751: "Family",
+  14: "Fantasy",
+  36: "History",
+  27: "Horror",
+  10402: "Music",
+  9648: "Mystery",
+  10749: "Romance",
+  878: "Sci-Fi",
+  10770: "TV Movie",
+  53: "Thriller",
+  10752: "War",
+  37: "Western",
+  10759: "Action",
+  10762: "Family",
+  10763: "Drama",
+  10764: "Reality",
+  10765: "Sci-Fi",
+  10766: "Drama",
+  10767: "Talk",
+  10768: "War"
+};
+
+async function fetchTMDBDetailsClient(id: number, type: string): Promise<Movie | null> {
+  try {
+    const apiType = type === "tv" ? "tv" : "movie";
+    const url = `https://api.themoviedb.org/3/${apiType}/${id}?api_key=${TMDB_API_KEY}&append_to_response=credits,external_ids,videos,similar`;
+    
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const data = await response.json();
+    
+    const cast = data.credits?.cast?.slice(0, 5).map((c: any) => c.name) || ["Featured Stars"];
+    const imdbId = data.external_ids?.imdb_id || null;
+    
+    let trailerUrl = "";
+    if (data.videos?.results && Array.isArray(data.videos.results)) {
+      const trailer = data.videos.results.find(
+        (v: any) => v.site === "YouTube" && (v.type === "Trailer" || v.type === "Teaser" || v.type === "Clip")
+      );
+      if (trailer) {
+        trailerUrl = `https://www.youtube.com/embed/${trailer.key}`;
+      }
+    }
+    if (!trailerUrl) {
+      trailerUrl = `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent((data.title || data.name) + " official trailer")}`;
+    }
+    
+    let duration = "2h 5m";
+    if (apiType === "movie" && data.runtime) {
+      const hrs = Math.floor(data.runtime / 60);
+      const mins = data.runtime % 60;
+      duration = hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+    } else if (apiType === "tv") {
+      const seasons = data.number_of_seasons || 1;
+      duration = `${seasons} ${seasons === 1 ? "Season" : "Seasons"}`;
+    }
+    
+    const genres = data.genres?.map((g: any) => g.name) || ["Drama"];
+    
+    const similar = (data.similar?.results || []).slice(0, 6).map((item: any) => {
+      const isTv = apiType === "tv";
+      const itemTitle = item.title || item.name || item.original_title || item.original_name;
+      const releaseDate = item.release_date || item.first_air_date || "2024";
+      
+      const posterUrl = item.poster_path 
+        ? `https://image.tmdb.org/t/p/w500${item.poster_path}` 
+        : "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=500";
+        
+      const backdropUrl = item.backdrop_path 
+        ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` 
+        : "https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1200";
+        
+      const itemGenres = (item.genre_ids || [])
+        .map((gid: number) => CLIENT_GENRE_MAP[gid])
+        .filter((g: any) => !!g);
+
+      return {
+        id: item.id,
+        title: itemTitle,
+        type: isTv ? "tv" : "movie",
+        overview: item.overview || "Similar recommendation Plot synopsis.",
+        rating: item.vote_average || 7.0,
+        releaseDate,
+        posterUrl,
+        backdropUrl,
+        genres: itemGenres.length > 0 ? itemGenres : ["Drama"],
+        trailerUrl: `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(itemTitle + " official trailer")}`,
+        duration: isTv ? "Season 1" : "2h",
+        cast: ["Featured Cast"]
+      };
+    });
+    
+    return {
+      id: data.id,
+      title: data.title || data.name || data.original_title || data.original_name,
+      type: apiType,
+      overview: data.overview || "",
+      rating: data.vote_average || 7.0,
+      releaseDate: data.release_date || data.first_air_date || "",
+      posterUrl: data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=500",
+      backdropUrl: data.backdrop_path ? `https://image.tmdb.org/t/p/original${data.backdrop_path}` : "https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=1200",
+      genres,
+      duration,
+      cast,
+      imdbId,
+      trailerUrl,
+      similar
+    };
+  } catch (err) {
+    console.error("Client fetchTMDBDetailsClient failed:", err);
+    return null;
+  }
+}
+
 interface MovieDetailModalProps {
   movie: Movie;
   onClose: () => void;
@@ -38,7 +162,10 @@ export default function MovieDetailModal({
 
     // 1. Fetch dynamic details (real cast, runtime, imdbId, YouTube trailers and similar movies)
     fetch(`/api/details?id=${movie.id}&type=${movie.type}`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("API status failure");
+        return res.json();
+      })
       .then((data) => {
         if (data.success && data.details) {
           setActiveMovie(data.details);
@@ -47,7 +174,17 @@ export default function MovieDetailModal({
           }
         }
       })
-      .catch((err) => console.error("Could not fetch TMDB dynamic details:", err));
+      .catch((err) => {
+        console.warn("Could not fetch TMDB dynamic details via api backend, switching to client fetch direct:", err);
+        fetchTMDBDetailsClient(movie.id, movie.type).then((details) => {
+          if (details) {
+            setActiveMovie(details);
+            if (details.imdbId) {
+              setStreamSource("playimdb");
+            }
+          }
+        });
+      });
 
     // 2. Fetch AI trivia
     setIsLoadingTrivia(true);
@@ -76,7 +213,10 @@ export default function MovieDetailModal({
 
     // Fetch dynamic details for the new selection
     fetch(`/api/details?id=${similarMovie.id}&type=${similarMovie.type}`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error("API status failure");
+        return res.json();
+      })
       .then((data) => {
         if (data.success && data.details) {
           setActiveMovie(data.details);
@@ -85,7 +225,17 @@ export default function MovieDetailModal({
           }
         }
       })
-      .catch((err) => console.error("Could not fetch TMDB details for similar:", err));
+      .catch((err) => {
+        console.warn("Could not fetch TMDB details for similar via backend:", err);
+        fetchTMDBDetailsClient(similarMovie.id, similarMovie.type).then((details) => {
+          if (details) {
+            setActiveMovie(details);
+            if (details.imdbId) {
+              setStreamSource("playimdb");
+            }
+          }
+        });
+      });
 
     // Fetch AI Trivia for the new selection
     setIsLoadingTrivia(true);
