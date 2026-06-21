@@ -11,7 +11,7 @@ import { Movie } from "./types";
 import { Sparkles, Bookmark, Play, Clock, X, MessageSquare, Lock, Flame, Rocket, Palette, Skull, Grid, Theater, Music } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { curatedMovies } from "./data/curatedMovies";
-import { isPlayable } from "./utils";
+import { isPlayable } from "@/lib/utils";
 const emptyStateImage = "https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=2070&auto=format&fit=crop";
 
 const TMDB_API_KEY = "1d84ab491afb8deec137b04c9f397a39";

@@ -3,7 +3,7 @@ import MovieCardSkeleton from "./MovieCardSkeleton";
 import { Star, Bookmark, BookmarkCheck, Play, ArrowRight, Eye, Grid, Flame, Rocket, Theater, Sparkles, Palette, Skull, Lock } from "lucide-react";
 import { Movie } from "../types";
 import { motion } from "motion/react";
-import { isPlayable } from "../utils";
+import { isPlayable } from "@/lib/utils";
 
 interface MovieGridProps {
   movies: Movie[];

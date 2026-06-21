@@ -2,7 +2,7 @@ import React, { useRef } from "react";
 import { Movie } from "../types";
 import { motion } from "motion/react";
 import { ChevronLeft, ChevronRight, Lock, Star, Bookmark, BookmarkCheck, Play, ArrowRight } from "lucide-react";
-import { isPlayable } from "../utils";
+import { isPlayable } from "@/lib/utils";
 
 interface MovieRowProps {
   movies: Movie[];

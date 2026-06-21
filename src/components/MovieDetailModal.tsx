@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { Movie, TriviaResponse, Person, TVEpisode } from "../types";
 import { motion, AnimatePresence } from "motion/react";
-import { isPlayable } from "../utils";
+import { isPlayable } from "@/lib/utils";
 import VideoPlayer from "./ui/video-player";
 import MovieCardSkeleton from "./MovieCardSkeleton";
 
