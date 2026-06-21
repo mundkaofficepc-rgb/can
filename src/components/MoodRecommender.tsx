@@ -1,7 +1,9 @@
 import React, { useState } from "react";
-import { Sparkles, Star, Play, Bookmark } from "lucide-react";
+import { Sparkles, Star, Play, Bookmark, Lock } from "lucide-react";
 import { Movie, RecommendationResponse } from "../types";
 import { motion } from "motion/react";
+import { curatedMovies } from "../data/curatedMovies";
+import { toast } from "sonner";
 
 interface MoodRecommenderProps {
   onSelectMovie: (movie: Movie) => void;
@@ -39,6 +41,9 @@ export default function MoodRecommender({
     if (clean && !favoriteFilms.includes(clean)) {
       setFavoriteFilms([...favoriteFilms, clean]);
       setFavoriteFilmInput("");
+      toast.success(`Film log updated`, {
+        description: `"${clean}" added as a personal favorite reference.`,
+      });
     }
   };
 
@@ -58,12 +63,66 @@ export default function MoodRecommender({
           favoredMovies: favoriteFilms,
         }),
       });
+      if (!response.ok) throw new Error("API status error");
       const data = await response.json();
       if (data.success) {
         setRecommendationResult(data);
+        toast.success("AI Insights Delivered", {
+          description: "Found top-tier matches based on your mood analysis.",
+        });
+      } else {
+        throw new Error("Success was false");
       }
     } catch (err) {
-      console.error("AI recommendation request failed", err);
+      console.warn("Backend AI recommendations offline or on static deploy. Running smart offline fallback model...", err);
+      
+      const lowerMood = mood.toLowerCase().trim();
+      const matches = curatedMovies.filter((movie) => {
+        // Match chosen genres
+        const genreMatches = selectedGenres.length === 0 ||
+          movie.genres.some((g) => selectedGenres.some((sg) => sg.toLowerCase() === g.toLowerCase()));
+
+        // Match keyword description in title, overview, or genres list
+        const keywordMatches = !lowerMood ||
+          movie.title.toLowerCase().includes(lowerMood) ||
+          movie.overview.toLowerCase().includes(lowerMood) ||
+          movie.genres.some((g) => lowerMood.includes(g.toLowerCase()));
+
+        return genreMatches && keywordMatches;
+      });
+
+      // If strict intersect matches have nothing, try relaxed union matching
+      let finalMatches = matches;
+      if (matches.length === 0) {
+        finalMatches = curatedMovies.filter((movie) => {
+          const genreMatches = selectedGenres.length > 0 &&
+            movie.genres.some((g) => selectedGenres.some((sg) => sg.toLowerCase() === g.toLowerCase()));
+          
+          const keywordMatches = lowerMood && (
+            movie.title.toLowerCase().includes(lowerMood) ||
+            movie.overview.toLowerCase().includes(lowerMood)
+          );
+          return !!(genreMatches || keywordMatches);
+        });
+      }
+
+      // Final ultimate fallback in case no matching genres or keywords found at all
+      const displayList = finalMatches.length > 0 ? finalMatches : curatedMovies;
+
+      // Map format with simulated reasoning response
+      const simulatedReasoningResult: RecommendationResponse = {
+        success: true,
+        reasoning: mood.trim()
+          ? `Searching deep catalogs for your mood: "${mood}". Found several titles matching your atmospheric vibe.`
+          : `We loaded top-tier movies with genres [${selectedGenres.join(", ")}] from verified offline cinema libraries.`,
+        movies: displayList.slice(0, 6) as Movie[],
+        source: "fallback"
+      };
+
+      setRecommendationResult(simulatedReasoningResult);
+      toast.info("Offline fallback mode active", {
+        description: "Scanned local database for matches since the AI server is busy.",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -193,6 +252,22 @@ export default function MoodRecommender({
         </div>
       ) : recommendationResult ? (
         <div className="space-y-6">
+          {/* Header Action Bar with Reset/Back Button */}
+          <div className="flex items-center justify-between pb-3 border-b border-white/5">
+            <h3 className="font-display font-bold text-sm uppercase tracking-wider text-white">Recommended for You</h3>
+            <button
+              onClick={() => {
+                setRecommendationResult(null);
+                setMood("");
+                setSelectedGenres([]);
+                setFavoriteFilms([]);
+              }}
+              className="px-4 py-1.5 rounded-full border border-white/10 hover:border-[#ff4e00]/50 text-xs font-mono font-bold uppercase tracking-wider text-zinc-400 hover:text-white bg-white/5 hover:bg-[#ff4e00]/10 transition-colors cursor-pointer"
+            >
+              ← Back to Questions / Reset
+            </button>
+          </div>
+
           {/* Reasoning Alert banner */}
           <div className="p-4 rounded-xl border border-[#ff4e00]/25 bg-[#ff4e00]/5 text-zinc-350">
             <h4 className="font-display font-black text-xs text-[#ff4e00] uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
@@ -218,15 +293,25 @@ export default function MoodRecommender({
                   className="group relative flex flex-col overflow-hidden bg-[#111111]/45 border border-white/5 rounded-xl hover:border-[#ff4e00]/40 transition-all cursor-pointer shadow-lg shadow-black/30"
                 >
                   <div className="relative aspect-[3/4] bg-[#121212]">
-                    <img
-                      src={m.posterUrl}
-                      alt={m.title}
-                      referrerPolicy="no-referrer"
-                      className="h-full w-full object-cover transition-transform group-hover:scale-103"
-                      onError={(e) => {
-                        e.currentTarget.src = "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=500";
-                      }}
-                    />
+                    {m.posterUrl === "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" ? (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center border-2 border-dashed border-zinc-800 bg-[#0a0a0a]">
+                         <div className="relative mb-3">
+                           <div className="absolute inset-0 animate-ping opacity-20 bg-[#ff4e00] rounded-full blur-xl border-dashed"></div>
+                           <Lock className="h-8 w-8 text-zinc-600 animate-pulse relative z-10" />
+                         </div>
+                         <span className="font-mono text-[9px] uppercase font-black tracking-widest text-[#ff4e00] opacity-80 border-b border-[#ff4e00]/30 pb-0.5 mb-2">Classified</span>
+                      </div>
+                    ) : (
+                      <img
+                        src={m.posterUrl}
+                        alt={m.title}
+                        referrerPolicy="no-referrer"
+                        className="h-full w-full object-cover transition-transform group-hover:scale-103"
+                        onError={(e) => {
+                          e.currentTarget.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+                        }}
+                      />
+                    )}
                     <div className="absolute top-2 left-2 flex items-center gap-1 rounded bg-black/85 px-1.5 py-0.5 text-[9px] font-bold text-yellow-500">
                       <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
                       {m.rating.toFixed(1)}

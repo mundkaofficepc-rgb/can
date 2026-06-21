@@ -1,21 +1,4 @@
-export interface Movie {
-  id: number;
-  title: string;
-  type: 'movie' | 'tv';
-  overview: string;
-  rating: number;
-  releaseDate: string;
-  posterUrl: string;
-  backdropUrl: string;
-  genres: string[];
-  trailerUrl: string;
-  duration: string;
-  cast: string[];
-  trending?: boolean;
-  popular?: boolean;
-  topRated?: boolean;
-  imdbId?: string;
-}
+import { Movie } from "../types";
 
 export const curatedMovies: Movie[] = [
   {
@@ -234,7 +217,249 @@ export const curatedMovies: Movie[] = [
     popular: true,
     topRated: false,
     imdbId: "tt5626028"
+  },
+  {
+    id: 865185,
+    title: "Pathaan",
+    type: "movie",
+    overview: "An Indian spy takes on the leader of a group of mercenaries who have nefarious plans to target his homeland.",
+    rating: 6.8,
+    releaseDate: "2023-01-25",
+    posterUrl: "https://image.tmdb.org/t/p/w500/m1b9OO4A80b4H12hN50Q0n3LgHh.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/j18EabN90Wv8ZJOrZ1yA0p1h4P8.jpg",
+    genres: ["Action", "Thriller", "Bollywood"],
+    trailerUrl: "https://www.youtube.com/embed/vqu4z34wENw",
+    duration: "2h 26m",
+    cast: ["Shah Rukh Khan", "Deepika Padukone", "John Abraham"],
+    trending: true,
+    popular: true,
+    topRated: false,
+    originalLanguage: "hi",
+    imdbId: "tt12844910"
+  },
+  {
+    id: 603692,
+    title: "Jawan",
+    type: "movie",
+    overview: "A high-octane action thriller which outlines the emotional journey of a man who is set to rectify the wrongs in the society.",
+    rating: 7.2,
+    releaseDate: "2023-09-07",
+    posterUrl: "https://image.tmdb.org/t/p/w500/jILeVkOBEXkZkccG5mF2lFf7M0u.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/2vFuG6bWGyQUzYS9d69E5l85nIz.jpg",
+    genres: ["Action", "Thriller", "Bollywood"],
+    trailerUrl: "https://www.youtube.com/embed/COv52Qyctws",
+    duration: "2h 49m",
+    cast: ["Shah Rukh Khan", "Nayanthara", "Vijay Sethupathi"],
+    trending: true,
+    popular: true,
+    topRated: true,
+    originalLanguage: "hi",
+    imdbId: "tt15354916"
+  },
+  {
+    id: 360814,
+    title: "Dangal",
+    type: "movie",
+    overview: "Former wrestler Mahavir Singh Phogat and his two wrestler daughters struggle towards glory at the Commonwealth Games in the face of societal oppression.",
+    rating: 8.3,
+    releaseDate: "2016-12-21",
+    posterUrl: "https://image.tmdb.org/t/p/w500/snlweASgw0Z9yKk2G3iWENzWnsV.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/tcheoA2nPATCm2vvXw2hVQoaEFD.jpg",
+    genres: ["Action", "Drama", "Bollywood"],
+    trailerUrl: "https://www.youtube.com/embed/x_7YlGv9u1g",
+    duration: "2h 41m",
+    cast: ["Aamir Khan", "Sakshi Tanwar", "Fatima Sana Shaikh"],
+    trending: false,
+    popular: true,
+    topRated: true,
+    originalLanguage: "hi",
+    imdbId: "tt5074352"
+  },
+  {
+    id: 579974,
+    title: "RRR",
+    type: "movie",
+    overview: "A fictitious story about two legendary revolutionaries and their journey away from home before they started fighting for their country in 1920s.",
+    rating: 7.8,
+    releaseDate: "2022-03-24",
+    posterUrl: "https://image.tmdb.org/t/p/w500/nEufeZlyAOLqO2brrs0yeF1lgHO.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/r0A2bIihgPdbIG5pU1GInlINvEw.jpg",
+    genres: ["Action", "Drama", "Bollywood"],
+    trailerUrl: "https://www.youtube.com/embed/NgBoIQ33x9E",
+    duration: "3h 7m",
+    cast: ["N.T. Rama Rao Jr.", "Ram Charan", "Alia Bhatt"],
+    trending: true,
+    popular: true,
+    topRated: true,
+    originalLanguage: "te",
+    imdbId: "tt8178634"
+  },
+  {
+    id: 770906,
+    title: "Animal",
+    type: "movie",
+    overview: "The hardened son of a powerful industrialist returns home after years abroad and finds himself in a blood-soaked war of revenge against those who threatened his father.",
+    rating: 6.5,
+    releaseDate: "2023-12-01",
+    posterUrl: "https://image.tmdb.org/t/p/w500/6y7bi1XSpLqE2eE9Xn6vPhS7YyY.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/f1S4pUv7HjS851R6M76Odt43Yat.jpg",
+    genres: ["Action", "Crime", "Drama", "Bollywood"],
+    trailerUrl: "https://www.youtube.com/embed/8FkLRUJj-o0",
+    duration: "3h 21m",
+    cast: ["Ranbir Kapoor", "Anil Kapoor", "Bobby Deol", "Rashmika Mandanna"],
+    trending: true,
+    popular: true,
+    originalLanguage: "hi",
+    imdbId: "tt13751072"
+  },
+  {
+    id: 672009,
+    title: "Tiger 3",
+    type: "movie",
+    overview: "Tiger and Zoya are back, this time to save the country and their family. It is personal.",
+    rating: 6.3,
+    releaseDate: "2023-11-12",
+    posterUrl: "https://image.tmdb.org/t/p/w500/p6F7SggSNoSUn9Gst838pB3U5sE.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/7RyHs7Z6g7gC9vXy3YjS7Tux.jpg",
+    genres: ["Action", "Thriller", "Bollywood"],
+    trailerUrl: "https://www.youtube.com/embed/vM7Z0O-O_8E",
+    duration: "2h 35m",
+    cast: ["Salman Khan", "Katrina Kaif", "Emraan Hashmi"],
+    trending: true,
+    originalLanguage: "hi",
+    imdbId: "tt11860888"
+  },
+  {
+    id: 496331,
+    title: "Brahmāstra Part One: Shiva",
+    type: "movie",
+    overview: "Shiva, a young man on the brink of falling in love with a woman named Isha, discovers he has a mysterious connection to the element of fire and a power to awaken the Brahmāstra.",
+    rating: 6.6,
+    releaseDate: "2022-09-09",
+    posterUrl: "https://image.tmdb.org/t/p/w500/v1oSjPjToAn9Xj8mCgq2mS7S5.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/4RyHs7Z6g7gC9vXy3YjS7Tux.jpg",
+    genres: ["Action", "Adventure", "Fantasy", "Bollywood"],
+    trailerUrl: "https://www.youtube.com/embed/BUjXzS8_YwF",
+    duration: "2h 47m",
+    cast: ["Ranbir Kapoor", "Alia Bhatt", "Amitabh Bachchan"],
+    originalLanguage: "hi",
+    imdbId: "tt6277462"
+  },
+  {
+    id: 256040,
+    title: "Baahubali: The Beginning",
+    type: "movie",
+    overview: "In ancient India, an adventurous and daring man becomes involved in a decades-old feud between two warring people.",
+    rating: 7.5,
+    releaseDate: "2015-07-10",
+    posterUrl: "https://image.tmdb.org/t/p/w500/99uYqD47A9V7SjB49m7XvNuS4TY.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/9RyHs7Z6g7gC9vXy3YjS7Tux.jpg",
+    genres: ["Action", "Adventure", "Drama", "Bollywood"],
+    trailerUrl: "https://www.youtube.com/embed/sOEg_YZ7vu8",
+    duration: "2h 38m",
+    cast: ["Prabhas", "Rana Daggubati", "Anushka Shetty"],
+    originalLanguage: "te",
+    imdbId: "tt2631186"
+  },
+  {
+    id: 698687,
+    title: "Pushpa: The Rise - Part 1",
+    type: "movie",
+    overview: "Pushpa Raj is a coolie who rises in the world of red sandalwood smuggling. Along the way, he doesn’t shy from making an enemy or two.",
+    rating: 7.1,
+    releaseDate: "2021-12-17",
+    posterUrl: "https://image.tmdb.org/t/p/w500/vGfEc1LpE2eE9Xn6vPhS7YyY.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/f1S4pUv7HjS851R6M76Odt43Yat.jpg",
+    genres: ["Action", "Crime", "Drama", "Bollywood"],
+    trailerUrl: "https://www.youtube.com/embed/pK7Z09ama6X",
+    duration: "2h 59m",
+    cast: ["Allu Arjun", "Rashmika Mandanna", "Fahadh Faasil"],
+    originalLanguage: "te",
+    imdbId: "tt12003946"
+  },
+  {
+    id: 1047120,
+    title: "Kantara",
+    type: "movie",
+    overview: "When greed paves the way for betrayal, scheming and murder, a young tribal reluctantly dons the traditions of his ancestors to seek justice.",
+    rating: 7.9,
+    releaseDate: "2022-09-30",
+    posterUrl: "https://image.tmdb.org/t/p/w500/39pma6X6L6X13p686pama6X.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/40pma6X6L6X13p686pama6X.jpg",
+    genres: ["Action", "Adventure", "Drama", "Bollywood"],
+    trailerUrl: "https://www.youtube.com/embed/vM7Z09ama6X",
+    duration: "2h 30m",
+    cast: ["Rishab Shetty", "Sapthami Gowda", "Kishore"],
+    originalLanguage: "kn",
+    imdbId: "tt15327088"
+  },
+  {
+    id: 293671,
+    title: "PK",
+    type: "movie",
+    overview: "A stranger in the city asks questions no one has asked before. Known only by his initials, P.K.'s innocent questions and childlike curiosity will take him on a journey of love, laughter and letting go.",
+    rating: 7.8,
+    releaseDate: "2014-12-18",
+    posterUrl: "https://image.tmdb.org/t/p/w500/z09ama6X6L6X13p686pama6X.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/z19ama6X6L6X13p686pama6X.jpg",
+    genres: ["Comedy", "Drama", "Sci-Fi", "Bollywood"],
+    trailerUrl: "https://www.youtube.com/embed/82Z09ama6X",
+    duration: "2h 33m",
+    cast: ["Aamir Khan", "Anushka Sharma", "Sushant Singh Rajput"],
+    originalLanguage: "hi",
+    imdbId: "tt2338151"
+  },
+  {
+    id: 4251,
+    title: "Sholay",
+    type: "movie",
+    overview: "After his family is murdered by a notorious and ruthless bandit, a retired police officer enlists the help of two outlaws to capture him.",
+    rating: 8.1,
+    releaseDate: "1975-08-15",
+    posterUrl: "https://image.tmdb.org/t/p/w500/sholay_poster.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/sholay_backdrop.jpg",
+    genres: ["Action", "Adventure", "Comedy", "Bollywood"],
+    trailerUrl: "https://www.youtube.com/embed/vM7Z09ama6X",
+    duration: "3h 24m",
+    cast: ["Amitabh Bachchan", "Dharmendra", "Sanjeev Kumar"],
+    originalLanguage: "hi",
+    imdbId: "tt0073707"
+  },
+  {
+    id: 1965,
+    title: "3 Idiots",
+    type: "movie",
+    overview: "Two friends are searching for their long lost companion. They revisit their college days and recall the memories of their friend who inspired them to think differently, even as the rest of the world called them idiots.",
+    rating: 8.4,
+    releaseDate: "2009-12-23",
+    posterUrl: "https://image.tmdb.org/t/p/w500/3_idiots_poster.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/3_idiots_backdrop.jpg",
+    genres: ["Comedy", "Drama", "Bollywood"],
+    trailerUrl: "https://www.youtube.com/embed/K0eDl8S0070",
+    duration: "2h 50m",
+    cast: ["Aamir Khan", "Madhavan", "Sharman Joshi"],
+    originalLanguage: "hi",
+    imdbId: "tt1187043"
+  },
+  {
+    id: 19404,
+    title: "Dilwale Dulhania Le Jayenge",
+    type: "movie",
+    overview: "Raj is a rich, carefree, happy-go-lucky second generation NRI. Simran is the daughter of Chaudhary Baldev Singh, who in spite of being an NRI is very strict about adherence to Indian values. Simran has left for India to be married to her childhood fiancé. Raj meets Simran on a journey through Europe and after some initial misadventures, they fall in love. Raj decides to come to India to win her and her whole family and finally Simran's father.",
+    rating: 8.6,
+    releaseDate: "1995-10-20",
+    posterUrl: "https://image.tmdb.org/t/p/w500/ddlj_poster.jpg",
+    backdropUrl: "https://image.tmdb.org/t/p/original/ddlj_backdrop.jpg",
+    genres: ["Comedy", "Drama", "Romance", "Bollywood"],
+    trailerUrl: "https://www.youtube.com/embed/c25GKl5VNeQ",
+    duration: "3h 10m",
+    cast: ["Shah Rukh Khan", "Kajol", "Amrish Puri"],
+    originalLanguage: "hi",
+    imdbId: "tt0112870"
   }
+
+
+
 ];
 
 // Fallback search suggestions and posters to make sure images load beautifully even if TMDB domain fluctuates

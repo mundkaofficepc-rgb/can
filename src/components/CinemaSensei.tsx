@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { MessageSquare, Send, Trash, Sparkles, User, X } from "lucide-react";
 import { Message, Movie } from "../types";
+import { toast } from "sonner";
 
 interface CinemaSenseiProps {
   currentMovie?: Movie | null;
@@ -92,6 +93,10 @@ export default function CinemaSensei({
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       },
     ]);
+    toast.warning("Chat history reset", {
+      icon: <Trash className="h-4 w-4" />,
+      description: "Session data has been purged from Sensei memory.",
+    });
   };
 
   const handlePromptClick = (p: string) => {

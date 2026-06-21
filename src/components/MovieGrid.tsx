@@ -1,7 +1,9 @@
 import React from "react";
-import { Star, Bookmark, BookmarkCheck, Play, ArrowRight, Eye } from "lucide-react";
+import MovieCardSkeleton from "./MovieCardSkeleton";
+import { Star, Bookmark, BookmarkCheck, Play, ArrowRight, Eye, Grid, Flame, Rocket, Theater, Sparkles, Palette, Skull, Lock } from "lucide-react";
 import { Movie } from "../types";
 import { motion } from "motion/react";
+import { isPlayable } from "../utils";
 
 interface MovieGridProps {
   movies: Movie[];
@@ -13,7 +15,29 @@ interface MovieGridProps {
   onGenreSelect?: (genre: string) => void;
   genresList?: string[];
   isLoading?: boolean;
+  sortBy?: string;
+  onSortByChange?: (sort: string) => void;
 }
+
+const getGenreIcon = (genre: string) => {
+  const normalized = genre.toLowerCase();
+  switch (normalized) {
+    case "action":
+      return <Flame className="h-3.5 w-3.5 text-orange-400" />;
+    case "sci-fi":
+      return <Rocket className="h-3.5 w-3.5 text-blue-400" />;
+    case "drama":
+      return <Theater className="h-3.5 w-3.5 text-pink-400" />;
+    case "fantasy":
+      return <Sparkles className="h-3.5 w-3.5 text-purple-400" />;
+    case "animation":
+      return <Palette className="h-3.5 w-3.5 text-yellow-400" />;
+    case "thriller":
+      return <Skull className="h-3.5 w-3.5 text-red-500" />;
+    default:
+      return <Grid className="h-3.5 w-3.5 text-zinc-400" />;
+  }
+};
 
 export default function MovieGrid({
   movies,
@@ -25,11 +49,11 @@ export default function MovieGrid({
   onGenreSelect,
   genresList,
   isLoading,
+  sortBy = "popularity",
+  onSortByChange,
 }: MovieGridProps) {
-  // Filter movies local to grid if onGenreSelect is not active (or handle local filter)
-  const displayedMovies = selectedGenre === "All"
-    ? movies
-    : movies.filter((m) => m.genres.some(g => g.toLowerCase() === selectedGenre.toLowerCase()));
+  // With dynamic TMDB category discovery, the movies array represents the selected category matches.
+  const displayedMovies = movies;
 
   // Motion variants
   const containerVariants = {
@@ -43,28 +67,48 @@ export default function MovieGrid({
   };
 
   return (
-    <div className="w-full py-6">
-      {/* Genre Pills */}
-      {genresList && onGenreSelect && (
-        <div className="mb-8 flex flex-wrap gap-2 justify-center py-2 border-b border-white/5 pb-4">
-          {genresList.map((genre) => (
-            <button
-              key={genre}
-              onClick={() => onGenreSelect(genre)}
-              className={`rounded-full px-5 py-2 text-xs font-semibold tracking-wider uppercase transition-all cursor-pointer ${
-                selectedGenre.toLowerCase() === genre.toLowerCase()
-                  ? "bg-[#ff4e00] text-white shadow-lg shadow-[#ff4e00]/30 font-bold"
-                  : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white border border-white/5"
-              }`}
-            >
-              {genre}
-            </button>
-          ))}
+    <div className="w-full py-3">
+      {/* Genre Pills & Sort */}
+      {( (genresList && onGenreSelect) || onSortByChange ) && (
+        <div className="mb-6 flex flex-col md:flex-row gap-4 justify-between items-center py-2 border-b border-white/5 pb-4">
+          {genresList && onGenreSelect && (
+            <div className="flex flex-wrap gap-2 justify-center">
+              {genresList.map((genre) => (
+                <button
+                  key={genre}
+                  onClick={() => onGenreSelect(genre)}
+                  className={`rounded-full px-4 py-1.5 text-[10px] font-semibold tracking-wider uppercase transition-all cursor-pointer flex items-center gap-1.5 ${
+                    selectedGenre.toLowerCase() === genre.toLowerCase()
+                      ? "bg-[#ff4e00] text-white shadow-lg shadow-[#ff4e00]/30 font-bold scale-[1.02]"
+                      : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white border border-white/5"
+                  }`}
+                >
+                  {getGenreIcon(genre)}
+                  <span>{genre}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          
+          {onSortByChange && (
+            <div className="flex items-center gap-2 bg-[#050505] border border-white/10 rounded-full px-3 py-1 shrink-0">
+               <span className="text-[10px] uppercase font-mono text-zinc-500 tracking-widest pl-1">Sort by:</span>
+               <select
+                 value={sortBy}
+                 onChange={(e) => onSortByChange(e.target.value)}
+                 className="bg-transparent text-[11px] text-zinc-200 border-none font-bold font-mono focus:outline-none focus:ring-0 cursor-pointer"
+               >
+                 <option value="popularity">Popularity</option>
+                 <option value="rating">Rating</option>
+                 <option value="releaseDate">Newest</option>
+               </select>
+            </div>
+          )}
         </div>
       )}
 
       {/* Grid Title */}
-      <div className="mb-6 flex items-center justify-between px-2">
+      <div className="mb-5 flex items-center justify-between px-1">
         <div>
           <h2 className="font-display text-xl font-bold md:text-2xl tracking-wide text-white border-l-4 border-[#ff4e00] pl-3.5">
             {title}
@@ -76,18 +120,51 @@ export default function MovieGrid({
       </div>
 
       {isLoading ? (
-        <div className="flex min-h-[300px] flex-col items-center justify-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-white/10 border-t-[#ff4e00]" />
-          <p className="font-mono text-xs text-zinc-500">Querying streaming indices...</p>
+        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 px-1 sm:px-2">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <MovieCardSkeleton key={i} />
+          ))}
         </div>
       ) : displayedMovies.length === 0 ? (
-        <div className="flex min-h-[250px] flex-col items-center justify-center rounded-xl border border-dashed border-white/10 bg-[#050505]/40 backdrop-blur pb-8 p-8 text-center">
-          <p className="font-sans text-sm text-zinc-400">No movies found in this collection.</p>
-          <p className="text-xs text-zinc-600 mt-1">Try another search keyword or ask the AI recommendation model below.</p>
+        <div className="flex min-h-[250px] flex-col items-center justify-center rounded-xl border border-dashed border-white/10 bg-[#050505]/40 backdrop-blur p-8 text-center gap-4 animate-fade-in">
+          <div>
+            <p className="font-sans text-sm text-zinc-400">No movies found in this collection.</p>
+            <p className="text-xs text-zinc-600 mt-1">Try another search keyword, or use the interactive buttons below to get back to streaming!</p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {selectedGenre !== "All" && (
+              <button
+                type="button"
+                onClick={() => onGenreSelect && onGenreSelect("All")}
+                className="px-4 py-2 border border-[#ff4e00]/20 bg-[#ff4e00]/10 hover:bg-[#ff4e00]/25 text-[#ff4e00] rounded-xl text-xs font-bold uppercase tracking-wider font-mono cursor-pointer transition-colors"
+              >
+                ← Back to All Genres
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                if (onGenreSelect) onGenreSelect("All");
+                const searchInput = document.getElementById("search-input") as HTMLInputElement;
+                if (searchInput) {
+                  searchInput.value = "";
+                }
+                const clearButton = document.querySelector("form button") as HTMLButtonElement;
+                if (clearButton) {
+                  clearButton.click();
+                } else {
+                  window.location.reload();
+                }
+              }}
+              className="px-4 py-2 border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-bold uppercase tracking-wider font-mono cursor-pointer transition-colors"
+            >
+              Reset Filters & Show All
+            </button>
+          </div>
         </div>
       ) : (
         <motion.div
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 px-2"
+          className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 px-1 sm:px-2"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
@@ -106,25 +183,50 @@ export default function MovieGrid({
                   onClick={() => onSelectMovie(movie)}
                   className="relative aspect-[2/3] w-full overflow-hidden bg-[#121212]"
                 >
-                  <img
-                    src={movie.posterUrl}
-                    alt={movie.title}
-                    referrerPolicy="no-referrer"
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    onError={(e) => {
-                      // Fallback Unsplash image if TMDB fails
-                      e.currentTarget.src = "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=500&auto=format&fit=crop";
-                    }}
-                  />
+                  {movie.posterUrl === "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" ? (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center border-2 border-dashed border-zinc-800 bg-[#0a0a0a]">
+                       <div className="relative mb-3">
+                         <div className="absolute inset-0 animate-ping opacity-20 bg-[#ff4e00] rounded-full blur-xl border-dashed"></div>
+                         <Lock className="h-10 w-10 text-zinc-600 animate-pulse relative z-10" />
+                       </div>
+                       <span className="font-mono text-[10px] uppercase font-black tracking-widest text-[#ff4e00] opacity-80 border-b border-[#ff4e00]/30 pb-1 mb-2">Classified</span>
+                       <span className="text-xs font-bold text-zinc-500 leading-tight">Asset Under<br/>Construction</span>
+                    </div>
+                  ) : (
+                    <img
+                      src={movie.posterUrl}
+                      alt={movie.title}
+                      referrerPolicy="no-referrer"
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      onError={(e) => {
+                        // Fallback Unsplash image if TMDB fails
+                        e.currentTarget.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+                      }}
+                    />
+                  )}
 
                   {/* Gradient Overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-transparent opacity-60 transition-opacity group-hover:opacity-85" />
 
                   {/* Play Button Overlay */}
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-all duration-300 group-hover:opacity-100">
-                    <div className="rounded-full bg-[#ff4e00]/95 p-3 text-white shadow-xl shadow-[#ff4e00]/40 backdrop-blur-xs transform scale-75 group-hover:scale-100 transition-transform">
-                      <Play className="h-5 w-5 fill-white" />
-                    </div>
+                    {!isPlayable(movie.releaseDate) ? (() => {
+                      const daysLeft = Math.ceil((new Date(movie.releaseDate as string).getTime() - new Date("2026-06-21").getTime()) / (1000 * 3600 * 24));
+                      return (
+                        <div className="rounded-xl bg-[#ff4e00]/95 px-3 py-1.5 text-white shadow-xl shadow-[#ff4e00]/40 text-center backdrop-blur-xs transform scale-75 group-hover:scale-100 transition-transform">
+                          <span className="block text-[9px] font-mono font-black uppercase tracking-widest text-[#ff4e00] bg-black/40 px-1 py-0.5 rounded mb-0.5">
+                            {daysLeft > 0 ? `In ${daysLeft} Days` : "Expected"}
+                          </span>
+                          <span className="block text-xs font-bold leading-tight">
+                            {new Date(movie.releaseDate as string).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })}
+                          </span>
+                        </div>
+                      );
+                    })() : (
+                      <div className="rounded-full bg-[#ff4e00]/95 p-3 text-white shadow-xl shadow-[#ff4e00]/40 backdrop-blur-xs transform scale-75 group-hover:scale-100 transition-transform">
+                        <Play className="h-5 w-5 fill-white" />
+                      </div>
+                    )}
                   </div>
 
                   {/* Ratings Tag */}
