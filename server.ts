@@ -74,7 +74,9 @@ app.get("/api/config", (req, res) => {
 });
 
 // TMDB Configuration & Genre mapping Dictionary
-const TMDB_API_KEY = process.env.TMDB_API_KEY || "1d84ab491afb8deec137b04c9f397a39";
+const TMDB_API_KEY_ENV = process.env.TMDB_API_KEY;
+console.log(`DEBUG: process.env.TMDB_API_KEY is ${TMDB_API_KEY_ENV ? 'defined' : 'undefined'}`);
+const TMDB_API_KEY = TMDB_API_KEY_ENV || "1d84ab491afb8deec137b04c9f397a39";
 if (!TMDB_API_KEY) {
   console.error("CRITICAL: TMDB_API_KEY is not defined in environment variables.");
 }
@@ -118,6 +120,8 @@ app.get("/api/movies", async (req, res) => {
     
     const trendingRes = await fetch(trendingUrl);
     if (!trendingRes.ok) {
+      const errorText = await trendingRes.text();
+      console.error(`TMDB trending weekly failed with status: ${trendingRes.status}, body: ${errorText}`);
       throw new Error(`TMDB trending weekly failed with status: ${trendingRes.status}`);
     }
     
@@ -226,6 +230,8 @@ app.post("/api/search", async (req, res) => {
     
     const response = await fetch(url);
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`TMDB search failed with status: ${response.status}, body: ${errorText}`);
       throw new Error(`TMDB search returned status ${response.status}`);
     }
     
