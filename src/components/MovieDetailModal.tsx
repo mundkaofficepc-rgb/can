@@ -3,10 +3,11 @@ import {
   X, Star, Play, Award, HelpCircle, Film, Info, ChevronRight, Share2,
   ChevronLeft, DollarSign, Globe, Calendar, TrendingUp, User, 
   Tv, Image, Video, Layers, Languages, Sparkles, Clock, Heart,
-  Building, CheckCircle, Tag, EyeOff, AlertTriangle, Bell, Lock
+  Building, CheckCircle, Tag, EyeOff, AlertTriangle, Bell, Lock, Minimize2
 } from "lucide-react";
 import { Movie, TriviaResponse, Person, TVEpisode } from "../types";
 import { motion, AnimatePresence } from "motion/react";
+import { toast } from "sonner";
 import { isPlayable } from "@/lib/utils";
 import VideoPlayer from "./ui/video-player";
 import MovieCardSkeleton from "./MovieCardSkeleton";
@@ -268,6 +269,7 @@ interface MovieDetailModalProps {
   isBookmarked: boolean;
   onToggleNotification?: (mId: number) => void;
   isNotified?: boolean;
+  onMinimize?: (movie: Movie) => void;
 }
 
 export default function MovieDetailModal({
@@ -277,6 +279,7 @@ export default function MovieDetailModal({
   isBookmarked,
   onToggleNotification,
   isNotified,
+  onMinimize,
 }: MovieDetailModalProps) {
   const [activeMovie, setActiveMovie] = useState<Movie>(movie);
   const [activeVideoTab, setActiveVideoTab] = useState<"trailer" | "stream">("stream");
@@ -559,6 +562,15 @@ export default function MovieDetailModal({
       >
         {/* Header Close Trigger */}
         <div className="absolute right-4 top-4 z-50 flex items-center gap-2">
+          {onMinimize && (
+            <button
+              onClick={() => onMinimize(activeMovie)}
+              className="rounded-full bg-black/80 p-2.5 text-zinc-400 hover:text-white border border-white/10 hover:bg-white/5 transition-all cursor-pointer shadow-md"
+              title="Minimize to Picture-in-Picture"
+            >
+              <Minimize2 className="h-5 w-5" />
+            </button>
+          )}
           <button
             onClick={onClose}
             className="rounded-full bg-black/80 p-2.5 text-zinc-400 hover:text-white border border-white/10 hover:bg-white/5 transition-all cursor-pointer shadow-md"
@@ -893,17 +905,33 @@ export default function MovieDetailModal({
                 <button
                   type="button"
                   onClick={async () => {
-                    const data = { title: activeMovie.title, url: window.location.href };
+                    const shareData = {
+                      title: activeMovie.title,
+                      text: `Check out ${activeMovie.title} on CineStream! ${activeMovie.overview ? activeMovie.overview.slice(0, 100) + "..." : ""}`,
+                      url: window.location.href,
+                    };
                     if (navigator.share) {
-                      try { await navigator.share(data); } catch {}
+                      try {
+                        await navigator.share(shareData);
+                      } catch (err) {
+                        if ((err as Error).name !== "AbortError") {
+                          toast.error("Could not share content.");
+                        }
+                      }
                     } else {
-                      navigator.clipboard.writeText(data.url);
-                      alert("Link Copied!");
+                      try {
+                        await navigator.clipboard.writeText(`${shareData.title} - ${shareData.url}`);
+                        toast.success("Movie link copied to clipboard!");
+                      } catch (err) {
+                        toast.error("Failed to copy link.");
+                      }
                     }
                   }}
                   className="flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white border border-white/5"
+                  title="Share Movie"
                 >
                   <Share2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Share</span>
                 </button>
                 <button
                   type="button"

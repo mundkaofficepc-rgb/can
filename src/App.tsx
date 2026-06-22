@@ -5,6 +5,7 @@ import MovieRow from "./components/MovieRow";
 import MovieDetailModal from "./components/MovieDetailModal";
 import MoodRecommender from "./components/MoodRecommender";
 import CinemaSensei from "./components/CinemaSensei";
+import MiniPlayer from "./components/MiniPlayer";
 import { Toaster } from "./components/ui/sonner";
 import { toast } from "sonner";
 import { Movie } from "./types";
@@ -233,6 +234,7 @@ export default function App() {
   const [movies, setMovies] = useState<Movie[]>(curatedMovies);
   const [activeTab, setActiveTab] = useState<string>("movies");
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
+  const [miniPlayerMovie, setMiniPlayerMovie] = useState<Movie | null>(null);
   const [watchlist, setWatchlist] = useState<number[]>(() => {
     try {
       const saved = localStorage.getItem("cinestream_watchlist");
@@ -1285,6 +1287,23 @@ export default function App() {
             isBookmarked={watchlist.includes(selectedMovie.id)}
             onToggleNotification={handleToggleNotification}
             isNotified={notifications.includes(selectedMovie.id)}
+            onMinimize={(movie) => {
+              setMiniPlayerMovie(movie);
+              setSelectedMovie(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {miniPlayerMovie && (
+          <MiniPlayer
+            movie={miniPlayerMovie}
+            onClose={() => setMiniPlayerMovie(null)}
+            onExpand={() => {
+              setSelectedMovie(miniPlayerMovie);
+              setMiniPlayerMovie(null);
+            }}
           />
         )}
       </AnimatePresence>

@@ -236,6 +236,7 @@ app.post("/api/search", async (req, res) => {
     }
     
     const data: any = await response.json();
+    console.log(`DEBUG: TMDB search raw data:`, JSON.stringify(data));
     if (!data || !Array.isArray(data.results)) {
       return res.json({ success: true, movies: [], source: "tmdb" });
     }
