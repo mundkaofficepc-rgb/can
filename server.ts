@@ -74,7 +74,7 @@ app.get("/api/config", (req, res) => {
 });
 
 // TMDB Configuration & Genre mapping Dictionary
-const TMDB_API_KEY = process.env.TMDB_API_KEY;
+const TMDB_API_KEY = process.env.TMDB_API_KEY || "1d84ab491afb8deec137b04c9f397a39";
 if (!TMDB_API_KEY) {
   console.error("CRITICAL: TMDB_API_KEY is not defined in environment variables.");
 }
