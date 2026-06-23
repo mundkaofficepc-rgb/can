@@ -98,9 +98,12 @@ export default function MovieGrid({
                  onChange={(e) => onSortByChange(e.target.value)}
                  className="bg-transparent text-[11px] text-zinc-200 border-none font-bold font-mono focus:outline-none focus:ring-0 cursor-pointer"
                >
-                 <option value="popularity">Popularity</option>
-                 <option value="rating">Rating</option>
-                 <option value="releaseDate">Newest</option>
+                 <option value="popularity" className="bg-[#111] text-white">Popularity</option>
+                 <option value="rating" className="bg-[#111] text-white">Rating</option>
+                 <option value="releaseDate" className="bg-[#111] text-white">Newest</option>
+                 <option value="releaseDateOldest" className="bg-[#111] text-white">Oldest</option>
+                 <option value="alphabetical" className="bg-[#111] text-white">Alphabetical (A-Z)</option>
+                 <option value="alphabeticalReverse" className="bg-[#111] text-white">Alphabetical (Z-A)</option>
                </select>
             </div>
           )}
@@ -108,19 +111,19 @@ export default function MovieGrid({
       )}
 
       {/* Grid Title */}
-      <div className="mb-5 flex items-center justify-between px-1">
+      <div className="mb-3 sm:mb-5 flex items-center justify-between px-1">
         <div>
-          <h2 className="font-display text-xl font-bold md:text-2xl tracking-wide text-white border-l-4 border-[#ff4e00] pl-3.5">
+          <h2 className="font-display text-sm sm:text-lg md:text-2xl tracking-wide text-white border-l-[3px] sm:border-l-4 border-[#ff4e00] pl-2 sm:pl-3.5 italic sm:not-italic">
             {title}
           </h2>
-          <p className="text-xs text-zinc-500 mt-1">
-            {isLoading ? "Searching world directories..." : `Displaying ${displayedMovies.length} matching cinematic masterworks.`}
+          <p className="text-[10px] sm:text-xs text-zinc-500 mt-0.5 sm:mt-1">
+            {isLoading ? "Searching world directories..." : `Found ${displayedMovies.length} titles`}
           </p>
         </div>
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 px-1 sm:px-2">
+        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-6 px-1 sm:px-2">
           {Array.from({ length: 12 }).map((_, i) => (
             <MovieCardSkeleton key={i} />
           ))}
@@ -164,7 +167,7 @@ export default function MovieGrid({
         </div>
       ) : (
         <motion.div
-          className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 px-1 sm:px-2"
+          className="grid grid-cols-3 xs:grid-cols-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-6 px-1 sm:px-2"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
@@ -242,23 +245,23 @@ export default function MovieGrid({
                 </div>
 
                 {/* Info Block */}
-                <div className="flex flex-1 flex-col p-3 z-10">
+                <div className="flex flex-1 flex-col p-1.5 sm:p-3 z-10 overflow-hidden">
                   <div className="flex items-start justify-between gap-1">
                     <h3 
                       onClick={() => onSelectMovie(movie)}
-                      className="line-clamp-1 font-display text-sm font-semibold text-zinc-100 group-hover:text-[#ff4e00]"
+                      className="line-clamp-1 font-display text-[9px] xs:text-[10px] sm:text-sm font-semibold text-zinc-100 group-hover:text-[#ff4e00] transition-colors"
                     >
                       {movie.title}
                     </h3>
                   </div>
 
                   {/* Genres / Metadata */}
-                  <p className="mt-1 line-clamp-1 font-sans text-[11px] text-zinc-400">
+                  <p className="mt-0.5 sm:mt-1 line-clamp-1 font-sans text-[8px] sm:text-[11px] text-zinc-400">
                     {movie.genres.join(", ")}
                   </p>
 
-                  <div className="mt-auto pt-3 flex items-center justify-between border-t border-white/5">
-                    <span className="font-mono text-[10px] text-zinc-400">
+                  <div className="mt-auto pt-1.5 sm:pt-3 flex items-center justify-between border-t border-white/5">
+                    <span className="font-mono text-[8px] sm:text-[10px] text-zinc-400 truncate pr-1">
                       {movie.releaseDate.substring(0, 4)} • {movie.duration}
                     </span>
                     

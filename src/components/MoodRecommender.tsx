@@ -4,6 +4,7 @@ import { Movie, RecommendationResponse } from "../types";
 import { motion } from "motion/react";
 import { curatedMovies } from "../data/curatedMovies";
 import { toast } from "sonner";
+import AnimatedGenerateButton from "./ui/animated-generate-button-shadcn-tailwind";
 
 interface MoodRecommenderProps {
   onSelectMovie: (movie: Movie) => void;
@@ -228,14 +229,17 @@ export default function MoodRecommender({
             </div>
 
             {/* Launch CTA */}
-            <button
-              onClick={generateAIRecommendations}
-              disabled={isLoading || (!mood.trim() && selectedGenres.length === 0 && favoriteFilms.length === 0)}
-              className="w-full bg-[#ff4e00] hover:bg-[#ff4e00]/90 disabled:bg-[#111] disabled:text-zinc-600 border border-[#ff4e03] disabled:border-white/5 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-white shadow-lg shadow-[#ff4e00]/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Sparkles className="h-4 w-4" />
-              {isLoading ? "Analyzing Cinema Paradises..." : "Initiate Mood Consultation"}
-            </button>
+            <div className="w-full flex justify-center">
+              <AnimatedGenerateButton
+                onClick={generateAIRecommendations}
+                disabled={isLoading || (!mood.trim() && selectedGenres.length === 0 && favoriteFilms.length === 0)}
+                generating={isLoading}
+                labelIdle="Initiate Mood Consultation"
+                labelActive="Analyzing Cinema Paradises..."
+                highlightHueDeg={15} // Beautiful warm color matching brand orange
+                className="w-full"
+              />
+            </div>
           </div>
 
         </div>

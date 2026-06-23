@@ -12,6 +12,39 @@ export default defineConfig(() => {
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg}'],
+          runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/api\.themoviedb\.org\/3\//,
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'tmdb-api-cache',
+                expiration: {
+                  maxEntries: 100,
+                  maxAgeSeconds: 60 * 60 * 24 // 24 hours
+                },
+                cacheableResponse: {
+                  statuses: [0, 200]
+                }
+              }
+            },
+            {
+              urlPattern: /^https:\/\/image\.tmdb\.org\/t\/p\//,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'tmdb-image-cache',
+                expiration: {
+                  maxEntries: 200,
+                  maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+                },
+                cacheableResponse: {
+                  statuses: [0, 200]
+                }
+              }
+            }
+          ]
+        },
         manifest: {
           name: 'CineStream',
           short_name: 'CineStream',
@@ -21,17 +54,17 @@ export default defineConfig(() => {
           display: 'standalone',
           icons: [
             {
-              src: '/src/assets/images/pwa_icon_1782117989848.jpg',
+              src: '/icon-192.jpg',
               sizes: '192x192',
               type: 'image/jpeg'
             },
             {
-              src: '/src/assets/images/pwa_icon_1782117989848.jpg',
+              src: '/icon-512.jpg',
               sizes: '512x512',
               type: 'image/jpeg'
             },
             {
-              src: '/src/assets/images/pwa_icon_1782117989848.jpg',
+              src: '/icon-512.jpg',
               sizes: '512x512',
               type: 'image/jpeg',
               purpose: 'any maskable'

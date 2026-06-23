@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Header from "./components/Header";
 import MovieGrid from "./components/MovieGrid";
 import MovieRow from "./components/MovieRow";
@@ -6,11 +6,14 @@ import MovieDetailModal from "./components/MovieDetailModal";
 import MoodRecommender from "./components/MoodRecommender";
 import CinemaSensei from "./components/CinemaSensei";
 import MiniPlayer from "./components/MiniPlayer";
+import MobileNav from "./components/MobileNav";
+import SettingsMenu from "./components/SettingsMenu";
 import { Toaster } from "./components/ui/sonner";
 import { toast } from "sonner";
 import { Movie } from "./types";
-import { Sparkles, Bookmark, Play, Clock, X, MessageSquare, Lock, Flame, Rocket, Palette, Skull, Grid, Theater, Music } from "lucide-react";
+import { Sparkles, Bookmark, Play, Clock, X, MessageSquare, Lock, Flame, Rocket, Palette, Skull, Grid, Theater, Music, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import GenreCloud from "./components/GenreCloud";
 import { curatedMovies } from "./data/curatedMovies";
 import { isPlayable } from "@/lib/utils";
 const emptyStateImage = "https://images.unsplash.com/photo-1594909122845-11baa439b7bf?q=80&w=2070&auto=format&fit=crop";
@@ -230,6 +233,37 @@ async function fetchTrendingWeekFromTMDB(): Promise<Movie[]> {
   return [];
 }
 
+async function fetchNowPlayingFromTMDB(): Promise<Movie[]> {
+  try {
+    const res = await fetch(`https://api.themoviedb.org/3/movie/now_playing?api_key=${TMDB_API_KEY}&language=en-US&page=1`);
+    if (res.ok) {
+      const data = await res.json();
+      const items = (data.results || []).map((item: any) => {
+        const title = item.title || item.original_title;
+        const genres = (item.genre_ids || []).map((gid: number) => CLIENT_GENRE_MAP[gid]).filter((g: any) => !!g);
+        return {
+          id: item.id,
+          title,
+          type: "movie",
+          overview: item.overview || "Freshly released in world theaters.",
+          rating: item.vote_average || 6.5,
+          releaseDate: item.release_date || "2026",
+          posterUrl: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+          backdropUrl: item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+          genres: genres.length > 0 ? genres : ["Now Playing"],
+          trailerUrl: `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(title + " official trailer")}`,
+          duration: "2h 10m",
+          cast: ["Main Cast"],
+        };
+      });
+      return items as Movie[];
+    }
+  } catch (err) {
+    console.error("TMDB now playing load error:", err);
+  }
+  return [];
+}
+
 export default function App() {
   const [movies, setMovies] = useState<Movie[]>(curatedMovies);
   const [activeTab, setActiveTab] = useState<string>("movies");
@@ -253,6 +287,20 @@ export default function App() {
       return [];
     }
   });
+
+  const continueWatchingRef = useRef<HTMLDivElement>(null);
+
+  const scrollContinueLeft = () => {
+    if (continueWatchingRef.current) {
+      continueWatchingRef.current.scrollBy({ left: -window.innerWidth / 1.5, behavior: "smooth" });
+    }
+  };
+
+  const scrollContinueRight = () => {
+    if (continueWatchingRef.current) {
+      continueWatchingRef.current.scrollBy({ left: window.innerWidth / 1.5, behavior: "smooth" });
+    }
+  };
   const [notifications, setNotifications] = useState<number[]>(() => {
     try {
       const saved = localStorage.getItem("cinestream_notifications");
@@ -269,24 +317,8 @@ export default function App() {
   const [isGenreLoading, setIsGenreLoading] = useState<boolean>(false);
   const [hasApiKey, setHasApiKey] = useState<boolean>(false);
   const [isSenseiOpen, setIsSenseiOpen] = useState<boolean>(false);
-
-  // Sorting logic
-  const sortedMovies = React.useMemo(() => {
-    return [...movies].sort((a, b) => {
-      switch (sortBy) {
-        case "rating":
-          return b.rating - a.rating;
-        case "releaseDate":
-          return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime();
-        case "popularity":
-        default:
-          return (b.popularity || 0) - (a.popularity || 0);
-      }
-    });
-  }, [movies, sortBy]);
-
-  // Language live search filter state
-  const [searchLanguageFilter, setSearchLanguageFilter] = useState<string>("All");
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [titleLanguage, setTitleLanguage] = useState<"en" | "original">("en");
 
   // Continue watching states
   const [continueWatching, setContinueWatching] = useState<Movie[]>(() => {
@@ -298,12 +330,62 @@ export default function App() {
     }
   });
 
+  // Localized movies based on language preference
+  const localizedMovies = React.useMemo(() => {
+    return movies.map(movie => ({
+      ...movie,
+      title: titleLanguage === "original" && movie.originalTitle ? movie.originalTitle : movie.title
+    }));
+  }, [movies, titleLanguage]);
+
+  const localizedContinueWatching = React.useMemo(() => {
+    return continueWatching.map(movie => ({
+      ...movie,
+      title: titleLanguage === "original" && movie.originalTitle ? movie.originalTitle : movie.title
+    }));
+  }, [continueWatching, titleLanguage]);
+  
+  const genresList = React.useMemo(() => {
+    const genres = new Set<string>();
+    movies.forEach(m => m.genres.forEach(g => {
+      if (g && g !== "All") genres.add(g);
+    }));
+    return ["All", ...Array.from(genres).sort()];
+  }, [movies]);
+
+  // Sorting logic
+  const sortedMovies = React.useMemo(() => {
+    const list = [...localizedMovies];
+    return list.sort((a, b) => {
+      switch (sortBy) {
+        case "rating":
+          return b.rating - a.rating;
+        case "releaseDate":
+          return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime();
+        case "releaseDateOldest":
+          return new Date(a.releaseDate).getTime() - new Date(b.releaseDate).getTime();
+        case "alphabetical":
+          return a.title.localeCompare(b.title);
+        case "alphabeticalReverse":
+          return b.title.localeCompare(a.title);
+        case "popularity":
+        default:
+          return (b.popularity || 0) - (a.popularity || 0);
+      }
+    });
+  }, [localizedMovies, sortBy]);
+
+  // Language live search filter state
+  const [searchLanguageFilter, setSearchLanguageFilter] = useState<string>("All");
+
   // Upcoming movies state
   const [upcomingMovies, setUpcomingMovies] = useState<Movie[]>([]);
   const [isUpcomingLoading, setIsUpcomingLoading] = useState<boolean>(false);
 
   // Trending week carousel hero state
   const [trendingWeekMovies, setTrendingWeekMovies] = useState<Movie[]>([]);
+  const [nowPlayingMovies, setNowPlayingMovies] = useState<Movie[]>([]);
+  const [isNowPlayingLoading, setIsNowPlayingLoading] = useState<boolean>(false);
   const [currentSlideIdx, setCurrentSlideIdx] = useState<number>(0);
 
   // Search results Live Filters - Genre, Year, Rating
@@ -316,10 +398,10 @@ export default function App() {
     const genres = new Set<string>();
     searchResults.forEach((m) => {
       m.genres.forEach((g) => {
-        if (g) genres.add(g);
+        if (g && g !== "All") genres.add(g);
       });
     });
-    return ["All", ...Array.from(genres)];
+    return ["All", ...Array.from(genres).sort()];
   }, [searchResults]);
 
   const searchResultYears = React.useMemo(() => {
@@ -327,7 +409,7 @@ export default function App() {
     searchResults.forEach((m) => {
       if (m.releaseDate) {
         const y = m.releaseDate.substring(0, 4);
-        if (y && y.length === 4) years.add(y);
+        if (y && y.length === 4 && y !== "All") years.add(y);
       }
     });
     return ["All", ...Array.from(years).sort().reverse()];
@@ -370,6 +452,12 @@ export default function App() {
           return b.rating - a.rating;
         case "releaseDate":
           return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime();
+        case "releaseDateOldest":
+          return new Date(a.releaseDate).getTime() - new Date(b.releaseDate).getTime();
+        case "alphabetical":
+          return a.title.localeCompare(b.title);
+        case "alphabeticalReverse":
+          return b.title.localeCompare(a.title);
         case "popularity":
         default:
           return (b.popularity || 0) - (a.popularity || 0);
@@ -377,8 +465,12 @@ export default function App() {
     });
   }, [filteredSearchResults, sortBy]);
 
-  // Genres deck
-  const genresList = ["All", "Action", "Sci-Fi", "Drama", "Fantasy", "Animation", "Thriller", "Bollywood"];
+  const localizedSearchResults = React.useMemo(() => {
+    return sortedSearchResults.map(movie => ({
+      ...movie,
+      title: titleLanguage === "original" && movie.originalTitle ? movie.originalTitle : movie.title
+    }));
+  }, [sortedSearchResults, titleLanguage]);
 
   // 1. Fetch AI credentials & baseline movies on mount
   useEffect(() => {
@@ -442,6 +534,17 @@ export default function App() {
         }
       })
       .catch((err) => console.error("Error loading trending week spotlight movies", err));
+
+    // Load Now Playing for New & Noteworthy
+    setIsNowPlayingLoading(true);
+    fetchNowPlayingFromTMDB()
+      .then((nowPlaying) => {
+        if (nowPlaying && nowPlaying.length > 0) {
+          setNowPlayingMovies(nowPlaying);
+        }
+      })
+      .catch((err) => console.error("Error loading now playing movies", err))
+      .finally(() => setIsNowPlayingLoading(false));
 
     // Restore Watchlist
     const savedWatchlist = localStorage.getItem("cinestream_watchlist");
@@ -602,6 +705,17 @@ export default function App() {
   };
 
   // Bookmark controller
+  // Haptic feedback utility
+  const triggerHaptic = (pattern: number | number[] = 15) => {
+    if (typeof window !== "undefined" && window.navigator && window.navigator.vibrate) {
+      try {
+        window.navigator.vibrate(pattern);
+      } catch (e) {
+        // Silently fail if blocked by browser policy
+      }
+    }
+  };
+
   const handleToggleWatchlist = (movieID: number) => {
     let updatedList: number[];
     const allKnownMovies = [
@@ -615,6 +729,7 @@ export default function App() {
     const title = movie?.title || "Movie";
 
     if (watchlist.includes(movieID)) {
+      triggerHaptic([15, 30, 15]); // Double tap for removal
       updatedList = watchlist.filter((id) => id !== movieID);
       const updatedFull = watchlistFull.filter(m => m.id !== movieID);
       setWatchlistFull(updatedFull);
@@ -624,6 +739,7 @@ export default function App() {
         description: `"${title}" has been removed.`,
       });
     } else {
+      triggerHaptic(20); // Solid single tap for success
       updatedList = [...watchlist, movieID];
       if (movie) {
         const updatedFull = [...watchlistFull, movie];
@@ -639,6 +755,15 @@ export default function App() {
     localStorage.setItem("cinestream_watchlist", JSON.stringify(updatedList));
   };
 
+  const handleRemoveFromContinue = (e: React.MouseEvent, movieId: number) => {
+    e.stopPropagation();
+    triggerHaptic([10, 20, 10]); // Subtle double tap
+    const updated = continueWatching.filter(m => m.id !== movieId);
+    setContinueWatching(updated);
+    localStorage.setItem("cinestream_continue", JSON.stringify(updated));
+    toast.info("Removed from Continue Watching");
+  };
+
   const handleToggleNotification = (movieID: number) => {
     let updatedList: number[];
     const allKnownMovies = [
@@ -652,11 +777,13 @@ export default function App() {
     const title = movie?.title || "Movie";
 
     if (notifications.includes(movieID)) {
+      triggerHaptic([10, 30, 10]);
       updatedList = notifications.filter((id) => id !== movieID);
       toast.error("Alert Disabled", {
         description: `Notifications for "${title}" turned off.`,
       });
     } else {
+      triggerHaptic(15);
       updatedList = [...notifications, movieID];
       toast.success("Alert Enabled", {
         description: `We'll notify you when "${title}" becomes available.`,
@@ -718,10 +845,11 @@ export default function App() {
         watchlistCount={watchlist.length}
         selectedGenre={selectedGenre}
         onBackToHome={handleResetCatalog}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
       {/* Main Container View Deck - Edge-to-edge spacing configuration */}
-      <main className="flex-1 w-full px-2 sm:px-6 md:px-8 py-4 relative z-10">
+      <main className="flex-1 w-full px-3 sm:px-6 md:px-8 py-4 pb-24 sm:pb-8 relative z-10">
         <AnimatePresence mode="wait">
           
           {/* TAB 1: CINEMATIC CATALOG */}
@@ -845,7 +973,7 @@ export default function App() {
                   )}
 
                   <MovieGrid
-                    movies={sortedSearchResults}
+                    movies={localizedSearchResults}
                     title={
                       searchGenreFilter !== "All" || searchYearFilter !== "All" || searchRatingFilter !== "All"
                         ? `Filtered Search Results for "${searchQuery}"`
@@ -864,28 +992,47 @@ export default function App() {
                 <>
                   {/* TMDB WEEKLY TRENDING SPOTLIGHT HERO CAROUSEL */}
                   {trendingWeekMovies.length > 0 && (
-                    <div className="relative mb-8 rounded-3xl overflow-hidden aspect-[21/9] md:aspect-[24/10] w-full bg-black border border-white/5 shadow-2xl group">
-                      {/* Backdrop Images with Crossfades */}
-                      <div className="absolute inset-0 z-0">
-                        {trendingWeekMovies[currentSlideIdx].backdropUrl === "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" ? (
-                          <div className="absolute inset-0 flex items-center justify-center bg-[#050505]">
-                            <div className="absolute inset-0 opacity-10 bg-gradient-to-tr from-[#ff4e00] to-transparent"></div>
-                            <div className="flex flex-col items-center opacity-40">
-                              <Lock className="h-20 w-20 text-[#ff4e00] animate-pulse" />
-                              <span className="font-mono mt-4 font-black tracking-[0.3em] uppercase text-[#ff4e00]">Classified Source</span>
+                    <div className="relative mb-6 rounded-2xl sm:rounded-3xl overflow-hidden aspect-[16/9] sm:aspect-[3/1] md:aspect-[4/1] w-full bg-black border border-white/5 shadow-2xl group">
+                      {/* Backdrop Images with Crossfades and Swipe Support */}
+                      <AnimatePresence initial={false} mode="wait">
+                        <motion.div
+                          key={currentSlideIdx}
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -20 }}
+                          transition={{ duration: 0.5, ease: "easeInOut" }}
+                          drag="x"
+                          dragConstraints={{ left: 0, right: 0 }}
+                          dragElastic={0.2}
+                          onDragEnd={(_, info) => {
+                            if (info.offset.x < -100) {
+                              setCurrentSlideIdx((prev) => (prev === trendingWeekMovies.length - 1 ? 0 : prev + 1));
+                            } else if (info.offset.x > 100) {
+                              setCurrentSlideIdx((prev) => (prev === 0 ? trendingWeekMovies.length - 1 : prev - 1));
+                            }
+                          }}
+                          className="absolute inset-0 z-0 cursor-grab active:cursor-grabbing"
+                        >
+                          {trendingWeekMovies[currentSlideIdx].backdropUrl === "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" ? (
+                            <div className="absolute inset-0 flex items-center justify-center bg-[#050505]">
+                              <div className="absolute inset-0 opacity-10 bg-gradient-to-tr from-[#ff4e00] to-transparent"></div>
+                              <div className="flex flex-col items-center opacity-40">
+                                <Lock className="h-20 w-20 text-[#ff4e00] animate-pulse" />
+                                <span className="font-mono mt-4 font-black tracking-[0.3em] uppercase text-[#ff4e00]">Classified Source</span>
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          <img
-                            src={trendingWeekMovies[currentSlideIdx].backdropUrl}
-                            alt={trendingWeekMovies[currentSlideIdx].title}
-                            className="w-full h-full object-cover object-top opacity-50 transition-all duration-1000 scale-[1.02] group-hover:scale-[1.05]"
-                          />
-                        )}
-                        {/* Dark Vignettes Layer */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent" />
-                        <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/20 to-transparent" />
-                      </div>
+                          ) : (
+                            <img
+                              src={trendingWeekMovies[currentSlideIdx].backdropUrl}
+                              alt={trendingWeekMovies[currentSlideIdx].title}
+                              className="w-full h-full object-cover object-top opacity-50 transition-all duration-1000 scale-[1.02] group-hover:scale-[1.05]"
+                            />
+                          )}
+                          {/* Dark Vignettes Layer */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent pointer-events-none" />
+                          <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-[#050505]/20 to-transparent pointer-events-none" />
+                        </motion.div>
+                      </AnimatePresence>
 
                       {/* Left & Right Nav Targets */}
                       <button
@@ -904,54 +1051,55 @@ export default function App() {
                       </button>
 
                       {/* Spotlight Info Card */}
-                      <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10 z-10 max-w-3xl space-y-3.5 text-left">
+                      <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-8 z-10 max-w-3xl space-y-1.5 sm:space-y-2.5 text-left">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-mono text-[9px] bg-[#ff4e00]/20 border border-[#ff4e00]/40 text-[#ff4e00] font-black uppercase tracking-widest px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
                             <Sparkles className="h-3 w-3 animate-spin" /> TRENDING THIS WEEK
                           </span>
-                          {trendingWeekMovies[currentSlideIdx].genres.map((g) => (
-                            <span key={g} className="font-mono text-[9px] bg-white/5 border border-white/10 text-zinc-300 font-semibold uppercase tracking-wider px-2 py-0.5 rounded">
+                          {Array.from(new Set(trendingWeekMovies[currentSlideIdx].genres)).map((g, gIdx) => (
+                            <span key={`${g}-${gIdx}`} className="font-mono text-[9px] bg-white/5 border border-white/10 text-zinc-300 font-semibold uppercase tracking-wider px-2 py-0.5 rounded">
                               {g}
                             </span>
                           ))}
                         </div>
 
-                        <h2 className="font-display font-black text-2xl sm:text-4xl md:text-5xl text-white tracking-tight leading-none drop-shadow-lg">
+                        <h2 className="font-display font-black text-xl sm:text-3xl md:text-4xl text-white tracking-tight leading-[1.1] drop-shadow-lg">
                           {trendingWeekMovies[currentSlideIdx].title}
                         </h2>
 
-                        <p className="text-zinc-300 text-xs sm:text-sm line-clamp-2 sm:line-clamp-3 leading-relaxed max-w-2xl font-sans drop-shadow">
+                        <p className="text-zinc-300 text-[10px] sm:text-xs line-clamp-2 leading-relaxed max-w-2xl font-sans drop-shadow opacity-90 sm:opacity-100">
                           {trendingWeekMovies[currentSlideIdx].overview}
                         </p>
 
-                        <div className="flex items-center gap-3 pt-2">
+                        <div className="flex items-center gap-2 sm:gap-3 pt-1 sm:pt-2 w-full sm:w-auto">
                           <button
                             onClick={() => handleSelectMovie(trendingWeekMovies[currentSlideIdx])}
-                            className={`px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer shadow-lg ${
+                            className={`flex flex-1 sm:flex-initial items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl text-[9px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-lg ${
                               !isPlayable(trendingWeekMovies[currentSlideIdx].releaseDate)
-                                ? "bg-[#ff4e00]/20 text-[#ff4e00] border border-[#ff4e00]/50 hover:bg-[#ff4e00]/30 shadow-[#ff4e00]/10"
-                                : "bg-[#ff4e00] text-white hover:bg-[#ff4e00]/90 shadow-[#ff4e00]/20"
+                                ? "bg-[#ff4e00]/20 text-[#ff4e00] border border-[#ff4e00]/50 hover:bg-[#ff4e00]/30"
+                                : "bg-[#ff4e00] text-white hover:bg-[#ff4e00]/90"
                             }`}
                           >
                             {!isPlayable(trendingWeekMovies[currentSlideIdx].releaseDate) ? (
                               <>
-                                <Clock className="h-4 w-4 shrink-0" /> Coming Soon: {new Date(trendingWeekMovies[currentSlideIdx].releaseDate as string).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" /> Soon
                               </>
                             ) : (
                               <>
-                                <Play className="h-4 w-4 fill-current shrink-0" /> Play Trailer & Intel
+                                <Play className="h-3 w-3 sm:h-3.5 sm:w-3.5 fill-current shrink-0" /> Play
                               </>
                             )}
                           </button>
                           <button
                             onClick={() => handleToggleWatchlist(trendingWeekMovies[currentSlideIdx].id)}
-                            className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all cursor-pointer shadow ${
+                            className={`flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl text-[9px] sm:text-xs font-bold uppercase tracking-wider border transition-all cursor-pointer shadow ${
                               watchlist.includes(trendingWeekMovies[currentSlideIdx].id)
-                                ? "bg-white/10 text-[#ff4e00] border-[#ff4e00]/50"
-                                : "bg-[#0b0b0b]/60 border-white/10 hover:border-white/30 text-zinc-300 hover:text-white hover:bg-black/80"
+                                ? "bg-[#ff4e00] text-white border-[#ff4e00]"
+                                : "bg-white/5 text-white border-white/10 hover:bg-white/10"
                             }`}
                           >
-                            {watchlist.includes(trendingWeekMovies[currentSlideIdx].id) ? "✓ Added To List" : "+ Add to List"}
+                            <Bookmark className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${watchlist.includes(trendingWeekMovies[currentSlideIdx].id) ? 'fill-current' : ''}`} />
+                            <span className="hidden xs:inline">{watchlist.includes(trendingWeekMovies[currentSlideIdx].id) ? "Saved" : "List"}</span>
                           </button>
                         </div>
                       </div>
@@ -972,99 +1120,130 @@ export default function App() {
                   )}
 
                   {/* Continue Watching section */}
-                  {continueWatching.length > 0 && (
-                    <div className="mb-10 animate-fade-in relative z-10 px-1 sm:px-2">
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className="p-1.5 rounded-lg bg-[#ff4e00]/15 text-[#ff4e00]">
-                          <Clock className="h-4 w-4" />
+                  {localizedContinueWatching.length > 0 && (
+                    <div className="mb-10 animate-fade-in relative z-10 group/cw">
+                      <div className="flex items-center gap-2 mb-3 sm:mb-4 px-2 sm:px-6">
+                        <span className="p-1 px-1.5 sm:p-1.5 rounded-lg bg-[#ff4e00]/15 text-[#ff4e00]">
+                          <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </span>
                         <div>
-                          <h2 className="font-display font-black text-lg text-white tracking-tight">
+                          <h2 className="font-display font-black text-sm sm:text-lg text-white tracking-tight">
                             Continue Watching
                           </h2>
-                          <p className="text-[11px] text-zinc-500 font-sans">
-                            Pick up right where you left off on these recently viewed titles.
+                          <p className="text-[9px] sm:text-[11px] text-zinc-500 font-sans">
+                            Resuming your cinematic journey.
                           </p>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
-                        {continueWatching.map((movie) => (
-                          <div
-                            key={movie.id}
-                            onClick={() => handleSelectMovie(movie)}
-                            className="group relative flex flex-col overflow-hidden rounded-xl bg-[#111111]/40 border border-white/5 hover:border-[#ff4e00]/50 shadow-md transition-all duration-300 cursor-pointer"
-                          >
-                            <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#121212]">
-                              <img
-                                src={movie.backdropUrl || movie.posterUrl}
-                                alt={movie.title}
-                                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                referrerPolicy="no-referrer"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80 animate-fade-in" />
-                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-                                {!isPlayable(movie.releaseDate) ? (
-                                  <div className="rounded-xl bg-[#ff4e00]/95 px-2.5 py-1 text-white shadow-xl shadow-[#ff4e00]/40 text-center backdrop-blur-xs transform scale-75 group-hover:scale-100 transition-transform">
-                                    <span className="block text-[8px] font-mono font-black uppercase tracking-widest text-[#ff4e00] bg-black/40 px-1 py-[1px] rounded mb-0.5">Soon</span>
-                                    <span className="block text-[10px] font-bold leading-tight">
-                                      {new Date(movie.releaseDate as string).toLocaleDateString(undefined, { month: 'short', year: '2-digit' })}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <div className="rounded-full bg-[#ff4e00]/95 p-2.5 text-white shadow-xl shadow-[#ff4e00]/40 backdrop-blur-xs transform scale-75 group-hover:scale-100 transition-transform">
-                                    <Play className="h-4 w-4 fill-white" />
-                                  </div>
-                                )}
+                      <div className="relative">
+                        <button
+                          onClick={scrollContinueLeft}
+                          className="absolute left-0 top-0 bottom-0 w-12 sm:w-16 z-20 flex flex-col items-center justify-center bg-gradient-to-r from-[#030303] via-[#030303]/80 to-transparent opacity-0 group-hover/cw:opacity-100 transition-opacity duration-300 disabled:opacity-0 cursor-pointer"
+                        >
+                          <ChevronLeft className="h-6 w-6 sm:h-8 sm:w-8 text-white filter drop-shadow-lg scale-90 hover:scale-125 transition-transform" />
+                        </button>
+
+                        <motion.div 
+                          ref={continueWatchingRef}
+                          className="flex gap-2 sm:gap-5 overflow-x-auto scrollbar-hide px-2 sm:px-6 py-2 snap-x snap-mandatory cursor-grab active:cursor-grabbing" 
+                          style={{ scrollBehavior: 'smooth', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                          drag="x"
+                          dragConstraints={{ left: -1000, right: 0 }} // Simplified constraints for swipe feedback
+                          dragElastic={0.1}
+                          onDragEnd={(_, info) => {
+                            if (info.offset.x < -50 && continueWatchingRef.current) {
+                              continueWatchingRef.current.scrollBy({ left: 300, behavior: 'smooth' });
+                            } else if (info.offset.x > 50 && continueWatchingRef.current) {
+                              continueWatchingRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+                            }
+                          }}
+                        >
+                          {localizedContinueWatching.map((movie) => (
+                            <div
+                              key={movie.id}
+                              onClick={() => handleSelectMovie(movie)}
+                              className="group relative flex flex-col overflow-hidden rounded-lg sm:rounded-xl bg-[#111111]/40 border border-white/5 hover:border-[#ff4e00]/50 shadow-md transition-all duration-300 cursor-pointer shrink-0 snap-start"
+                              style={{ width: "clamp(120px, 35vw, 220px)" }}
+                            >
+                              {/* Remove from Continue Watching Button */}
+                              <button
+                                onClick={(e) => handleRemoveFromContinue(e, movie.id)}
+                                className="absolute top-1.5 right-1.5 z-30 p-1 rounded-full bg-black/60 text-white/50 hover:text-white hover:bg-[#ff4e00]/80 transition-all opacity-0 group-hover:opacity-100 backdrop-blur-sm"
+                                title="Remove from list"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+
+                              <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#121212]">
+                                <img
+                                  src={movie.backdropUrl || movie.posterUrl}
+                                  alt={movie.title}
+                                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                  referrerPolicy="no-referrer"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80 animate-fade-in" />
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
+                                  {!isPlayable(movie.releaseDate) ? (
+                                    <div className="rounded-xl bg-[#ff4e00]/95 px-2.5 py-1 text-white shadow-xl shadow-[#ff4e00]/40 text-center backdrop-blur-xs transform scale-75 group-hover:scale-100 transition-transform">
+                                      <span className="block text-[8px] font-mono font-black uppercase tracking-widest text-[#ff4e00] bg-black/40 px-1 py-[1px] rounded mb-0.5">Soon</span>
+                                      <span className="block text-[10px] font-bold leading-tight">
+                                        {new Date(movie.releaseDate as string).toLocaleDateString(undefined, { month: 'short', year: '2-digit' })}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <div className="rounded-full bg-[#ff4e00]/95 p-2.5 text-white shadow-xl shadow-[#ff4e00]/40 backdrop-blur-xs transform scale-75 group-hover:scale-100 transition-transform">
+                                      <Play className="h-4 w-4 fill-white" />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="p-2.5 flex flex-col justify-between flex-1">
+                                <h3 className="line-clamp-1 font-sans text-xs font-semibold text-zinc-200 group-hover:text-[#ff4e00] transition-colors">
+                                  {movie.title}
+                                </h3>
+                                <p className="text-[10px] text-zinc-500 font-mono mt-0.5">
+                                  {movie.genres[0]} • {movie.type.toUpperCase()}
+                                </p>
                               </div>
                             </div>
-                            <div className="p-2.5 flex flex-col justify-between flex-1">
-                              <h3 className="line-clamp-1 font-sans text-xs font-semibold text-zinc-200 group-hover:text-[#ff4e00] transition-colors">
-                                {movie.title}
-                              </h3>
-                              <p className="text-[10px] text-zinc-500 font-mono mt-0.5">
-                                {movie.genres[0]} • {movie.type.toUpperCase()}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                          ))}
+                        </motion.div>
+
+                        <button
+                          onClick={scrollContinueRight}
+                          className="absolute right-0 top-0 bottom-0 w-12 sm:w-16 z-20 flex flex-col items-center justify-center bg-gradient-to-l from-[#030303] via-[#030303]/80 to-transparent opacity-0 group-hover/cw:opacity-100 transition-opacity duration-300 disabled:opacity-0 cursor-pointer"
+                        >
+                          <ChevronRight className="h-6 w-6 sm:h-8 sm:w-8 text-white filter drop-shadow-lg scale-90 hover:scale-125 transition-transform" />
+                        </button>
                       </div>
+                    </div>
+                  )}
+
+                  {/* New & Noteworthy carousel */}
+                  {nowPlayingMovies.length > 0 && selectedGenre === "All" && (
+                    <div className="mb-10 animate-fade-in relative z-10">
+                      <MovieRow 
+                        title="New & Noteworthy" 
+                        movies={nowPlayingMovies}
+                        onSelectMovie={handleSelectMovie}
+                        onToggleWatchlist={handleToggleWatchlist}
+                        watchlist={watchlist}
+                        isLoading={isNowPlayingLoading}
+                        icon={<Sparkles className="h-4 w-4" />}
+                      />
                     </div>
                   )}
 
                   {/* Default full category discover */}
                   {selectedGenre === "All" ? (
-                    <div className="flex flex-col relative z-10 w-full overflow-hidden pb-12">
-                      <div className="mb-6 flex flex-wrap gap-2 justify-center py-2 border-b border-white/5 pb-4 mt-2">
-                        {genresList.map((genre) => {
-                          const getGenreIcon = (g: string) => {
-                            const normalized = g.toLowerCase();
-                            switch (normalized) {
-                              case "action": return <Flame className="h-3.5 w-3.5 text-orange-400" />;
-                              case "sci-fi": return <Rocket className="h-3.5 w-3.5 text-blue-400" />;
-                              case "drama": return <Theater className="h-3.5 w-3.5 text-pink-400" />;
-                              case "fantasy": return <Sparkles className="h-3.5 w-3.5 text-purple-400" />;
-                              case "animation": return <Palette className="h-3.5 w-3.5 text-yellow-400" />;
-                              case "thriller": return <Skull className="h-3.5 w-3.5 text-red-500" />;
-                              case "bollywood": return <Music className="h-3.5 w-3.5 text-[#ff4e00]" />;
-                              default: return <Grid className="h-3.5 w-3.5 text-zinc-400" />;
-                            }
-                          };
-                          return (
-                            <button
-                              key={genre}
-                              onClick={() => setSelectedGenre(genre)}
-                              className={`rounded-full px-4.5 py-2 text-xs font-semibold tracking-wider uppercase transition-all cursor-pointer flex items-center gap-1.5 ${
-                                selectedGenre.toLowerCase() === genre.toLowerCase()
-                                  ? "bg-[#ff4e00] text-white shadow-lg shadow-[#ff4e00]/30 font-bold scale-[1.02]"
-                                  : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white border border-white/5"
-                              }`}
-                            >
-                              {getGenreIcon(genre)}
-                              <span>{genre}</span>
-                            </button>
-                          );
-                        })}
+                    <div className="flex flex-col relative z-20 w-full overflow-hidden pb-12">
+                      <div className="px-1 sm:px-2 mb-8">
+                        <GenreCloud 
+                          genres={genresList} 
+                          selectedGenre={selectedGenre}
+                          onGenreSelect={setSelectedGenre}
+                        />
                       </div>
                       
                       <div className="space-y-6">
@@ -1097,7 +1276,7 @@ export default function App() {
                         />
                         
                         <MovieRow
-                          movies={dedupeMovies(movies.filter(m => m.genres.some(g => g === "Action" || g === "Sci-Fi" || g === "Adventure")))}
+                          movies={dedupeMovies(localizedMovies.filter(m => m.genres.some(g => g === "Action" || g === "Sci-Fi" || g === "Adventure")))}
                           title="Action & Adventure"
                           onSelectMovie={handleSelectMovie}
                           onToggleWatchlist={handleToggleWatchlist}
@@ -1105,7 +1284,7 @@ export default function App() {
                         />
 
                         <MovieRow
-                          movies={dedupeMovies(movies.filter(m => m.genres.some(g => g === "Animation" || g === "Family" || g === "Comedy")))}
+                          movies={dedupeMovies(localizedMovies.filter(m => m.genres.some(g => g === "Animation" || g === "Family" || g === "Comedy")))}
                           title="Comedy & Animation"
                           onSelectMovie={handleSelectMovie}
                           onToggleWatchlist={handleToggleWatchlist}
@@ -1113,7 +1292,7 @@ export default function App() {
                         />
 
                         <MovieRow
-                          movies={dedupeMovies(movies.filter(m => m.genres.some(g => g === "Thriller" || g === "Crime" || g === "Horror")))}
+                          movies={dedupeMovies(localizedMovies.filter(m => m.genres.some(g => g === "Thriller" || g === "Crime" || g === "Horror")))}
                           title="Dark & Thrilling"
                           onSelectMovie={handleSelectMovie}
                           onToggleWatchlist={handleToggleWatchlist}
@@ -1121,7 +1300,7 @@ export default function App() {
                         />
 
                         <MovieRow
-                          movies={dedupeMovies(movies.filter(m => m.genres.some(g => g === "Drama" || g === "Romance")))}
+                          movies={dedupeMovies(localizedMovies.filter(m => m.genres.some(g => g === "Drama" || g === "Romance")))}
                           title="Drama & Romance"
                           onSelectMovie={handleSelectMovie}
                           onToggleWatchlist={handleToggleWatchlist}
@@ -1305,6 +1484,19 @@ export default function App() {
               setMiniPlayerMovie(null);
             }}
           />
+        )}
+      </AnimatePresence>
+
+      <MobileNav 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        watchlistCount={watchlist.length} 
+        onOpenSettings={() => setIsSettingsOpen(true)}
+      />
+
+      <AnimatePresence>
+        {isSettingsOpen && (
+          <SettingsMenu onClose={() => setIsSettingsOpen(false)} />
         )}
       </AnimatePresence>
 

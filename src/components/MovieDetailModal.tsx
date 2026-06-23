@@ -132,12 +132,14 @@ async function fetchTMDBDetailsClient(id: number, type: string): Promise<Movie |
         profilePath: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
       }));
 
-    const fullCast = (data.credits?.cast || []).slice(0, 30).map((c: any) => ({
-      id: c.id,
-      name: c.name,
-      character: c.character || "Acting Personnel",
-      profilePath: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
-    }));
+    const fullCast = Array.from(new Map<number, { id: number; name: string; character: string; profilePath: string }>(
+      (data.credits?.cast || []).slice(0, 30).map((c: any) => [c.id, {
+        id: c.id,
+        name: c.name,
+        character: c.character || "Acting Personnel",
+        profilePath: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+      }])
+    ).values());
 
     const videos = (data.videos?.results || []).map((v: any) => ({
       key: v.key,
@@ -551,40 +553,50 @@ export default function MovieDetailModal({
   const clipsOnly = movieVideos.filter(v => v.type === "Clip" && v.site === "YouTube");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-2 py-4 md:p-8 backdrop-blur-md bg-black/90">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto backdrop-blur-md bg-black md:p-8" id="modal-backdrop">
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-        transition={{ type: "spring", damping: 25, stiffness: 200 }}
-        className="relative w-full max-w-6xl rounded-2xl bg-[#030303] border border-white/10 shadow-2xl overflow-hidden shadow-black/100 flex flex-col max-h-[92vh]"
+        initial={{ y: "100%", opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: "100%", opacity: 0 }}
+        transition={{ type: "spring", damping: 30, stiffness: 300, mass: 0.8 }}
+        className="relative w-full h-full md:h-auto md:max-h-[92vh] max-w-6xl md:rounded-2xl bg-[#030303] md:border md:border-white/10 shadow-2xl overflow-hidden shadow-black/100 flex flex-col"
         id="movie-detail-modal"
       >
-        {/* Header Close Trigger */}
-        <div className="absolute right-4 top-4 z-50 flex items-center gap-2">
-          {onMinimize && (
-            <button
-              onClick={() => onMinimize(activeMovie)}
-              className="rounded-full bg-black/80 p-2.5 text-zinc-400 hover:text-white border border-white/10 hover:bg-white/5 transition-all cursor-pointer shadow-md"
-              title="Minimize to Picture-in-Picture"
-            >
-              <Minimize2 className="h-5 w-5" />
-            </button>
-          )}
+        {/* Header Navigation Controls */}
+        <div className="absolute inset-x-0 top-0 z-50 flex items-center justify-between p-4 pointer-events-none">
           <button
             onClick={onClose}
-            className="rounded-full bg-black/80 p-2.5 text-zinc-400 hover:text-white border border-white/10 hover:bg-white/5 transition-all cursor-pointer shadow-md"
-            title="Close Console"
+            className="rounded-full bg-black/80 p-2.5 text-zinc-400 hover:text-white border border-white/10 hover:bg-white/5 transition-all cursor-pointer shadow-md pointer-events-auto md:hidden"
+            title="Go Back"
           >
-            <X className="h-5 w-5" />
+            <ChevronLeft className="h-5 w-5" />
           </button>
+          
+          <div className="flex items-center gap-2 ml-auto pointer-events-auto">
+            {onMinimize && (
+              <button
+                onClick={() => onMinimize(activeMovie)}
+                className="rounded-full bg-black/80 p-2.5 text-zinc-400 hover:text-white border border-white/10 hover:bg-white/5 transition-all cursor-pointer shadow-md"
+                title="Minimize to Picture-in-Picture"
+              >
+                <Minimize2 className="h-5 w-5" />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className={`rounded-full bg-black/80 p-2.5 text-zinc-400 hover:text-white border border-white/10 hover:bg-white/5 transition-all cursor-pointer shadow-md ${onMinimize ? '' : 'ml-auto'}`}
+              title="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Frame Area */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
 
           {/* 🎬 MOVIE BACKDROP & CORE HEADER OVERLAY */}
-          <div className="relative h-64 md:h-[340px] w-full overflow-hidden shrink-0">
+          <div className="relative h-56 xxs:h-64 md:h-[340px] w-full overflow-hidden shrink-0">
             {activeMovie.backdropUrl === "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" ? (
               <div className="absolute inset-0 flex items-center justify-center bg-[#050505]">
                 <div className="absolute inset-0 opacity-10 bg-gradient-to-tr from-[#ff4e00] to-transparent"></div>
@@ -607,9 +619,8 @@ export default function MovieDetailModal({
             <div className="absolute inset-0 bg-gradient-to-t from-[#030303] via-[#030303]/40 to-transparent" />
             <div className="absolute inset-0 bg-gradient-to-r from-[#030303]/90 via-transparent to-transparent hidden md:block" />
             
-            {/* Poster & Header Meta Alignment */}
-            <div className="absolute bottom-6 left-6 right-6 flex items-end gap-6 z-10">
-              <div className="relative group hidden md:block shrink-0">
+          <div className="absolute inset-x-0 bottom-0 p-4 sm:p-8 flex items-end gap-4 sm:gap-6 z-10">
+            <div className="relative group shrink-0 hidden sm:block">
                 {activeMovie.posterUrl === "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" ? (
                   <div className="flex flex-col items-center justify-center h-48 w-34 rounded-xl border-2 border-dashed border-zinc-800 bg-[#0a0a0a] shadow-2xl p-2 text-center">
                     <div className="relative mb-2">
@@ -654,34 +665,34 @@ export default function MovieDetailModal({
                   )}
                 </div>
 
-                <h2 className="font-display text-2xl md:text-5xl font-black tracking-tight text-white mt-3 leading-none drop-shadow-md">
+                <h2 className="font-display text-xl xs:text-2xl md:text-5xl font-black tracking-tight text-white mt-3 leading-none drop-shadow-md">
                   {activeMovie.title}
                 </h2>
                 
                 {activeMovie.originalTitle && activeMovie.originalTitle !== activeMovie.title && (
-                  <p className="text-zinc-400/90 font-mono text-[11px] mt-1 italic tracking-wide">
+                  <p className="text-zinc-400/90 font-mono text-[9px] xs:text-[11px] mt-1 italic tracking-wide">
                     Original Name: {activeMovie.originalTitle}
                   </p>
                 )}
 
                 {activeMovie.tagline && (
-                  <p className="text-[#ff4e00] font-sans italic text-xs md:text-sm mt-2 font-medium drop-shadow leading-snug">
+                  <p className="text-[#ff4e00] font-sans italic text-[10px] sm:text-xs md:text-sm mt-2 font-medium drop-shadow leading-snug">
                     &ldquo;{activeMovie.tagline}&rdquo;
                   </p>
                 )}
 
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-3 text-[11px] md:text-xs text-zinc-300 font-mono">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-3 text-[9px] xs:text-[11px] md:text-xs text-zinc-300 font-mono">
                   <span className="flex items-center gap-1 text-[#f59e0b] font-extrabold tracking-tight">
-                    <Star className="h-4 w-4 fill-[#f59e0b] text-[#f59e0b]" />
+                    <Star className="h-3 w-3 xs:h-4 xs:w-4 fill-[#f59e0b] text-[#f59e0b]" />
                     {activeMovie.rating ? activeMovie.rating.toFixed(1) : "7.0"} <span className="text-zinc-500 font-normal">/ 10</span>
                   </span>
                   {activeMovie.voteCount && activeMovie.voteCount > 0 && (
-                    <span className="text-zinc-500">({activeMovie.voteCount.toLocaleString()} votes)</span>
+                    <span className="text-zinc-500 text-[8px] xs:text-[10px]">({activeMovie.voteCount.toLocaleString()} votes)</span>
                   )}
                   <span>•</span>
-                  <span className="flex items-center gap-0.5"><Calendar className="h-3.5 w-3.5 text-zinc-400 shrink-0" /> {activeMovie.releaseDate || "N/A"}</span>
+                  <span className="flex items-center gap-0.5"><Calendar className="h-3 w-3 xs:h-3.5 xs:w-3.5 text-zinc-400 shrink-0" /> {activeMovie.releaseDate || "N/A"}</span>
                   <span>•</span>
-                  <span className="flex items-center gap-0.5"><Clock className="h-3.5 w-3.5 text-zinc-400 shrink-0" /> {activeMovie.duration}</span>
+                  <span className="flex items-center gap-0.5"><Clock className="h-3 w-3 xs:h-3.5 xs:w-3.5 text-zinc-400 shrink-0" /> {activeMovie.duration}</span>
                   {activeMovie.popularity && activeMovie.popularity > 0 && (
                     <>
                       <span>•</span>
@@ -692,7 +703,7 @@ export default function MovieDetailModal({
 
                 {activeMovie.genres && activeMovie.genres.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-3">
-                    {activeMovie.genres.map(g => (
+                    {Array.from(new Set(activeMovie.genres)).map(g => (
                       <span key={g} className="text-[10px] font-mono tracking-wider font-semibold border border-white/10 hover:border-[#ff4e00]/40 text-zinc-300 hover:text-white px-2.5 py-0.5 bg-black/35 rounded transition-all">
                         {g}
                       </span>
@@ -704,50 +715,52 @@ export default function MovieDetailModal({
           </div>
 
           {/* ▶️ SYSTEM MEDIA STREAMER MODULE */}
-          <div className="p-4 md:p-6 space-y-4 bg-zinc-950/20 border-b border-white/5">
+          <div className="p-3 sm:p-6 space-y-4 bg-zinc-950/20 border-b border-white/5">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-3">
-              <div className="flex gap-2.5">
+              <div className="flex gap-2 w-full sm:w-auto">
                 <button
                   type="button"
                   id="tab-stream-player"
                   onClick={() => setActiveVideoTab("stream")}
-                  className={`flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-lg ${
+                  className={`flex flex-1 sm:flex-initial items-center justify-center gap-1.5 px-3 sm:px-4.5 py-2 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-lg ${
                     activeVideoTab === "stream"
                       ? "bg-[#ff4e00] text-white shadow-[#ff4e00]/25"
                       : "bg-white/5 text-zinc-450 hover:text-zinc-200 border border-white/5 hover:bg-white/10"
                   }`}
                 >
-                  {!isPlayable(activeMovie.releaseDate) ? <Clock className="h-4 w-4 text-white" /> : <Play className="h-4 w-4 fill-current text-white" />}
-                  {!isPlayable(activeMovie.releaseDate) ? "Coming Soon" : "CineStream Player"}
+                  {!isPlayable(activeMovie.releaseDate) ? <Clock className="h-4 w-4 text-white" /> : <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-current text-white" />}
+                  {!isPlayable(activeMovie.releaseDate) ? "Soon" : "Stream"}
                 </button>
                 <button
                   type="button"
                   id="tab-trailer-player"
                   onClick={() => setActiveVideoTab("trailer")}
-                  className={`flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-lg ${
+                  className={`flex flex-1 sm:flex-initial items-center justify-center gap-1.5 px-3 sm:px-4.5 py-2 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-lg ${
                     activeVideoTab === "trailer"
                       ? "bg-[#ff4e00] text-white shadow-[#ff4e00]/25"
                       : "bg-white/5 text-zinc-450 hover:text-zinc-200 border border-white/5 hover:bg-white/10"
                   }`}
                 >
-                  <Film className="h-4 w-4 text-white" />
-                  Official Trailer
+                  <Film className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
+                  Trailer
                 </button>
               </div>
 
               {/* Streaming Embed Frame Source selectors */}
               {activeVideoTab === "stream" && isPlayable(activeMovie.releaseDate) && (
-                <div className="flex items-center gap-2.5 bg-[#030303] border border-white/10 rounded-xl px-3 py-1.5 shadow-md">
-                  <span className="font-mono text-[9px] text-[#ff4e00] uppercase tracking-widest font-black">Streaming Engine:</span>
+                <div className="flex items-center gap-1.5 sm:gap-2.5 bg-[#030303] border border-white/10 rounded-xl px-2 sm:px-3 py-1.5 shadow-md overflow-hidden">
+                  <span className="font-mono text-[8px] sm:text-[9px] text-[#ff4e00] uppercase tracking-widest font-black shrink-0">
+                    <span className="hidden xs:inline">Streaming </span>Engine:
+                  </span>
                   <select
                     value={streamSource}
                     onChange={(e) => setStreamSource(e.target.value)}
-                    className="bg-transparent text-xs text-zinc-100 border-none font-bold font-mono focus:outline-none focus:ring-0 cursor-pointer text-ellipsis max-w-[170px]"
+                    className="bg-transparent text-[10px] sm:text-xs text-zinc-100 border-none font-bold font-mono focus:outline-none focus:ring-0 cursor-pointer text-ellipsis flex-1 min-w-0"
                   >
-                    {activeMovie.imdbId && <option value="playimdb">PlayIMDB (On-The-Fly Server)</option>}
-                    <option value="vidsrc_to">VidSrc.To (Fast Engine)</option>
-                    <option value="vidsrc_me">VidSrc.Me (Multiplex Proxy)</option>
-                    <option value="embed_su">Embed.Su (Stable Full-HD)</option>
+                    {activeMovie.imdbId && <option value="playimdb">PlayIMDB (On-The-Fly)</option>}
+                    <option value="vidsrc_to">VidSrc.To (Fast)</option>
+                    <option value="vidsrc_me">VidSrc.Me (Multiplex)</option>
+                    <option value="embed_su">Embed.Su (Stable HD)</option>
                   </select>
                 </div>
               )}
@@ -927,23 +940,23 @@ export default function MovieDetailModal({
                       }
                     }
                   }}
-                  className="flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white border border-white/5"
+                  className="flex items-center justify-center gap-2 px-3.5 sm:px-5 py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg bg-white/5 text-zinc-300 hover:bg-white/10 hover:text-white border border-white/5"
                   title="Share Movie"
                 >
-                  <Share2 className="h-4 w-4" />
-                  <span className="hidden sm:inline">Share</span>
+                  <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="hidden xs:inline">Share</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => onToggleWatchlist(activeMovie.id)}
-                  className={`flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg w-full sm:w-auto ${
+                  className={`flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg w-full sm:w-auto ${
                     isBookmarked
                       ? "bg-white/10 text-[#ff4e00] border-2 border-[#ff4e00]/50 hover:bg-white/15"
                       : "bg-[#ff4e00] text-white hover:bg-[#ff4e00]/90 shadow-[#ff4e00]/20"
                   }`}
                 >
-                  <Heart className={`h-4 w-4 ${isBookmarked ? "fill-current" : ""}`} />
-                  {isBookmarked ? "BOOKMARKED IN CINECELL" : "ADD TO CINECELL LIST"}
+                  <Heart className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isBookmarked ? "fill-current" : ""}`} />
+                  {isBookmarked ? "BOOKMARKED" : "ADD TO LIST"}
                 </button>
               </div>
             </div>
@@ -951,74 +964,74 @@ export default function MovieDetailModal({
 
           {/* 📌 SYSTEM NAVIGATION DECK (EXHAUSTIVE TABS) */}
           <div className="bg-[#080808] border-b border-white/15 px-4 md:px-6 sticky top-0 z-30 shadow-md backdrop-blur-md">
-            <div className="flex items-center overflow-x-auto whitespace-nowrap gap-1 md:gap-2 py-3 scrollbar-hide">
+            <div className="flex items-center sm:flex-nowrap overflow-x-auto sm:overflow-x-visible whitespace-nowrap gap-1 md:gap-2 py-3 scrollbar-hide">
               <button
                 onClick={() => setCurrentDetailTab("overview")}
-                className={`px-4 py-2 font-mono text-[10px] md:text-xs uppercase tracking-wider font-bold rounded-lg transition-all ${
+                className={`px-2.5 sm:px-4 py-2 font-mono text-[8.5px] sm:text-[10px] md:text-xs uppercase tracking-wider font-bold rounded-lg transition-all ${
                   currentDetailTab === "overview"
                     ? "bg-[#ff4e00] text-white font-black"
                     : "text-zinc-400 hover:text-white hover:bg-white/5"
                 }`}
               >
-                📖 Story & AI Intel
+                📖 Story<span className="hidden xs:inline"> & AI Intel</span>
               </button>
               <button
                 onClick={() => setCurrentDetailTab("cast")}
-                className={`px-4 py-2 font-mono text-[10px] md:text-xs uppercase tracking-wider font-bold rounded-lg transition-all ${
+                className={`px-2.5 sm:px-4 py-2 font-mono text-[8.5px] sm:text-[10px] md:text-xs uppercase tracking-wider font-bold rounded-lg transition-all ${
                   currentDetailTab === "cast"
                     ? "bg-[#ff4e00] text-white font-black"
                     : "text-zinc-400 hover:text-white hover:bg-white/5"
                 }`}
               >
-                🎭 Cast & Filmmakers
+                🎭 Cast<span className="hidden xs:inline"> & Crew</span>
               </button>
               {activeMovie.type === "tv" && (
                 <button
                   onClick={() => setCurrentDetailTab("seasons")}
-                  className={`px-4 py-2 font-mono text-[10px] md:text-xs uppercase tracking-wider font-bold rounded-lg transition-all ${
+                  className={`px-2.5 sm:px-4 py-2 font-mono text-[8.5px] sm:text-[10px] md:text-xs uppercase tracking-wider font-bold rounded-lg transition-all ${
                     currentDetailTab === "seasons"
                       ? "bg-[#ff4e00] text-white font-black"
                       : "text-zinc-400 hover:text-white hover:bg-white/5"
                   }`}
                 >
-                  📺 Episodic Guide
+                  📺 Episodes
                 </button>
               )}
               <button
                 onClick={() => setCurrentDetailTab("media")}
-                className={`px-4 py-2 font-mono text-[10px] md:text-xs uppercase tracking-wider font-bold rounded-lg transition-all ${
+                className={`px-2.5 sm:px-4 py-2 font-mono text-[8.5px] sm:text-[10px] md:text-xs uppercase tracking-wider font-bold rounded-lg transition-all ${
                   currentDetailTab === "media"
                     ? "bg-[#ff4e00] text-white font-black"
                     : "text-zinc-400 hover:text-white hover:bg-white/5"
                 }`}
               >
-                🎥 Trailers & Gallery
+                🎥 Media<span className="hidden xs:inline"> & Gallery</span>
               </button>
               <button
                 onClick={() => setCurrentDetailTab("production")}
-                className={`px-4 py-2 font-mono text-[10px] md:text-xs uppercase tracking-wider font-bold rounded-lg transition-all ${
+                className={`px-2.5 sm:px-4 py-2 font-mono text-[8.5px] sm:text-[10px] md:text-xs uppercase tracking-wider font-bold rounded-lg transition-all ${
                   currentDetailTab === "production"
                     ? "bg-[#ff4e00] text-white font-black"
                     : "text-zinc-400 hover:text-white hover:bg-white/5"
                 }`}
               >
-                🏢 Production & Finance
+                🏢 Production
               </button>
               <button
                 onClick={() => setCurrentDetailTab("similar")}
-                className={`px-4 py-2 font-mono text-[10px] md:text-xs uppercase tracking-wider font-bold rounded-lg transition-all ${
+                className={`px-2.5 sm:px-4 py-2 font-mono text-[8.5px] sm:text-[10px] md:text-xs uppercase tracking-wider font-bold rounded-lg transition-all ${
                   currentDetailTab === "similar"
                     ? "bg-[#ff4e00] text-white font-black"
                     : "text-zinc-400 hover:text-white hover:bg-white/5"
                 }`}
               >
-                🔥 Similar Recommendations
+                🔥 Similar
               </button>
             </div>
           </div>
 
           {/* TAB CONTENT SPACES */}
-          <div className="p-6 md:p-8 space-y-8">
+          <div className="p-4 sm:p-6 md:p-8 space-y-6 sm:space-y-8">
 
             {/* TAB 1: OVERVIEW & STORY */}
             {currentDetailTab === "overview" && (
@@ -1042,9 +1055,9 @@ export default function MovieDetailModal({
                         <h4 className="text-zinc-500 font-mono text-[10px] uppercase font-bold tracking-widest flex items-center gap-1">
                           <Tag className="h-3 w-3 text-zinc-450" /> Plot Keywords
                         </h4>
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {activeMovie.keywords.map(kw => (
-                            <span key={kw} className="bg-white/5 border border-white/5 text-zinc-400 hover:text-white hover:border-[#ff4e00]/25 rounded px-2.5 py-1 text-[10px] font-sans transition-colors cursor-pointer capitalize">
+                        <div className="flex flex-wrap gap-1 md:gap-1.5 pt-1">
+                          {Array.from(new Set(activeMovie.keywords)).map((kw, idx) => (
+                            <span key={`${kw}-${idx}`} className="bg-white/5 border border-white/5 text-zinc-400 hover:text-white hover:border-[#ff4e00]/25 rounded px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9px] sm:text-[10px] font-sans transition-colors cursor-pointer capitalize">
                               #{kw}
                             </span>
                           ))}
@@ -1393,15 +1406,15 @@ export default function MovieDetailModal({
                   <h3 className="text-[#ff4e00] font-mono text-[11px] font-black uppercase tracking-widest border-b border-white/5 pb-2">
                     🎭 Screen Actors & Main Cast ({activeMovie.fullCast ? activeMovie.fullCast.length : 5} members)
                   </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-4">
                     {activeMovie.fullCast && activeMovie.fullCast.length > 0 ? (
                       activeMovie.fullCast.map(actor => (
                         <div
                           key={actor.id}
                           onClick={() => setSelectedPersonId(actor.id)}
-                          className="group bg-zinc-950 border border-white/5 hover:border-[#ff4e00]/30 rounded-xl p-3 space-y-2 cursor-pointer transition-colors text-center relative hover:bg-white/5 shadow-md flex flex-col justify-between"
+                          className="group bg-zinc-950 border border-white/5 hover:border-[#ff4e00]/30 rounded-xl p-2.5 sm:p-3 space-y-1.5 sm:space-y-2 cursor-pointer transition-colors text-center relative hover:bg-white/5 shadow-md flex flex-col justify-between"
                         >
-                          <div className="relative aspect-[1/1] w-20 h-20 rounded-full overflow-hidden border-2 border-white/10 group-hover:border-[#ff4e00]/50 transition-colors mx-auto shrink-0 shadow-lg">
+                          <div className="relative aspect-[1/1] w-14 h-14 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-white/10 group-hover:border-[#ff4e00]/50 transition-colors mx-auto shrink-0 shadow-lg">
                             <img
                               src={actor.profilePath}
                               alt={actor.name}

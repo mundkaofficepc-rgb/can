@@ -3,6 +3,7 @@ import { Movie } from "../types";
 import { motion } from "motion/react";
 import { ChevronLeft, ChevronRight, Lock, Star, Bookmark, BookmarkCheck, Play, ArrowRight } from "lucide-react";
 import { isPlayable } from "@/lib/utils";
+import MovieCardSkeleton from "./MovieCardSkeleton";
 
 interface MovieRowProps {
   movies: Movie[];
@@ -10,6 +11,8 @@ interface MovieRowProps {
   onSelectMovie: (movie: Movie) => void;
   onToggleWatchlist: (mId: number) => void;
   watchlist: number[];
+  isLoading?: boolean;
+  icon?: React.ReactNode;
 }
 
 export default function MovieRow({
@@ -18,6 +21,8 @@ export default function MovieRow({
   onSelectMovie,
   onToggleWatchlist,
   watchlist,
+  isLoading,
+  icon,
 }: MovieRowProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -33,14 +38,34 @@ export default function MovieRow({
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="w-full py-4 relative">
+        <div className="mb-4 px-6 flex items-center gap-3">
+          <div className="h-6 w-48 bg-zinc-800 animate-pulse rounded" />
+        </div>
+        <div className="flex gap-5 overflow-hidden px-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="min-w-[150px] sm:min-w-[220px]">
+              <MovieCardSkeleton />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (movies.length === 0) return null;
 
   return (
-    <div className="w-full py-4 relative group/row">
-      <div className="mb-4 flex flex-col md:flex-row md:items-center justify-between px-2 sm:px-6">
+    <div className="w-full py-2 sm:py-4 relative group/row">
+      <div className="mb-2 sm:mb-4 flex flex-col md:flex-row md:items-center justify-between px-2 sm:px-6">
         <div>
-          <h2 className="font-display text-xl font-bold tracking-wide text-white border-l-4 border-[#ff4e00] pl-3.5 flex items-center gap-2">
-            {title}
+          <h2 className="font-display text-sm sm:text-lg md:text-xl font-bold tracking-wide text-white border-l-[3px] sm:border-l-4 border-[#ff4e00] pl-2 sm:pl-3.5 flex items-center gap-2">
+            <span className="flex items-center gap-2">
+              {icon && <span className="text-[#ff4e00]">{icon}</span>}
+              {title}
+            </span>
             <ArrowRight className="h-4 w-4 text-[#ff4e00]/80 opacity-0 -translate-x-2 group-hover/row:opacity-100 group-hover/row:translate-x-0 transition-all duration-300" />
           </h2>
         </div>
@@ -56,7 +81,7 @@ export default function MovieRow({
 
         <div
           ref={scrollRef}
-          className="flex gap-4 sm:gap-5 overflow-x-auto scrollbar-hide px-2 sm:px-6 py-2 snap-x snap-mandatory"
+          className="flex gap-2.5 sm:gap-5 overflow-x-auto scrollbar-hide px-2 sm:px-6 py-2 snap-x snap-mandatory"
           style={{ scrollBehavior: 'smooth', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {movies.map((movie) => {
@@ -66,8 +91,8 @@ export default function MovieRow({
             return (
               <motion.div
                 key={movie.id}
-                className="group relative flex flex-col overflow-hidden bg-[#111111]/45 border border-white/5 rounded-2xl hover:border-white/10 transition-all cursor-pointer shadow-lg shadow-black/30 shrink-0 snap-start"
-                style={{ width: "160px" }}
+                className="group relative flex flex-col overflow-hidden bg-[#111111]/45 border border-white/5 rounded-lg sm:rounded-2xl hover:border-white/10 transition-all cursor-pointer shadow-lg shadow-black/30 shrink-0 snap-start"
+                style={{ width: "clamp(84px, 24vw, 165px)" }}
                 whileHover={{ y: -5, scale: 1.02 }}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -134,15 +159,15 @@ export default function MovieRow({
                   )}
                 </div>
 
-                <div className="flex flex-1 flex-col p-3">
-                  <h3 className="line-clamp-1 font-display text-sm font-semibold text-white drop-shadow-md">
+                <div className="flex flex-1 flex-col p-1.5 sm:p-3 overflow-hidden">
+                  <h3 className="line-clamp-1 font-display text-[9px] xs:text-[10px] sm:text-sm font-semibold text-white drop-shadow-md">
                     {movie.title}
                   </h3>
-                  <div className="mt-auto flex items-center justify-between pt-1">
-                    <span className="text-[11px] font-mono font-medium text-zinc-500 bg-white/5 px-2 py-0.5 rounded-sm border border-white/5">
-                      {new Date(movie.releaseDate).getFullYear() || "UPCOMING"}
+                  <div className="mt-auto flex items-center justify-between pt-0.5 sm:pt-1">
+                    <span className="text-[8px] sm:text-[11px] font-mono font-medium text-zinc-500 bg-white/5 px-1 sm:px-2 py-0.5 rounded-sm border border-white/5 truncate max-w-[70%]">
+                      {new Date(movie.releaseDate).getFullYear() || "U/C"}
                     </span>
-                    {movie.adult && <span className="text-[9px] font-bold text-red-500 border border-red-500/30 px-1 py-0.5 rounded backdrop-blur">18+</span>}
+                    {movie.adult && <span className="text-[7px] sm:text-[9px] font-bold text-red-500 border border-red-500/30 px-1 py-0.5 rounded backdrop-blur">18+</span>}
                   </div>
                 </div>
               </motion.div>

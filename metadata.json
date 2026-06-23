@@ -1,6 +1,6 @@
 {
   "name": "CineStream",
-  "description": "An immersive streaming and movie discovery dashboard featuring custom curated lists, a fully integrated video player, and AI-powered recommendations and reviews.",
+  "description": "An immersive, mobile-installable (PWA) movie discovery platform featuring curated carousels, integrated video playback, and AI-powered cinema intelligence.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
