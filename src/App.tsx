@@ -8,6 +8,7 @@ import CinemaSensei from "./components/CinemaSensei";
 import MiniPlayer from "./components/MiniPlayer";
 import MobileNav from "./components/MobileNav";
 import SettingsMenu from "./components/SettingsMenu";
+import { InstallPrompt } from "./components/InstallPrompt";
 import { Toaster } from "./components/ui/sonner";
 import { toast } from "sonner";
 import { Movie } from "./types";
@@ -611,6 +612,15 @@ export default function App() {
     }
   }, [selectedMovie]);
 
+  // Auto-scroll trending hero carousel
+  useEffect(() => {
+    if (trendingWeekMovies.length === 0) return;
+    const interval = setInterval(() => {
+      setCurrentSlideIdx((curr) => (curr >= trendingWeekMovies.length - 1 ? 0 : curr + 1));
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [trendingWeekMovies]);
+
   // Global keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -832,6 +842,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans flex flex-col selection:bg-[#ff4e00] selection:text-white relative pb-10">
+      <InstallPrompt />
       
       {/* Absolute Ambient Background Glow Decor */}
       <div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-b from-[#ff4e00]/5 to-transparent pointer-events-none z-0" />
@@ -1250,18 +1261,6 @@ export default function App() {
                         <MovieRow
                           movies={dedupeMovies(trendingWeekMovies)}
                           title="Trending Now"
-                          onSelectMovie={handleSelectMovie}
-                          onToggleWatchlist={handleToggleWatchlist}
-                          watchlist={watchlist}
-                        />
-
-                        {/* Bollywood row improved with state movies merge and dedupe */}
-                        <MovieRow
-                          movies={dedupeMovies([
-                            ...curatedMovies.filter(m => m.originalLanguage === "hi" || m.genres.includes("Bollywood")),
-                            ...movies.filter(m => m.originalLanguage === "hi" || m.genres.includes("Bollywood"))
-                          ])}
-                          title="Bollywood Hits"
                           onSelectMovie={handleSelectMovie}
                           onToggleWatchlist={handleToggleWatchlist}
                           watchlist={watchlist}

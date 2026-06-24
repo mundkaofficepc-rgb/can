@@ -350,6 +350,7 @@ export default function MovieDetailModal({
   // Trivia states
   const [isLoadingTrivia, setIsLoadingTrivia] = useState<boolean>(false);
   const [triviaData, setTriviaData] = useState<TriviaResponse | null>(null);
+  const [externalRatings, setExternalRatings] = useState<{ imdb: string, rottenTomatoes: string, metacritic: string } | null>(null);
 
   // Selected Person Profile (Actors/Crew drawer mode)
   const [selectedPersonId, setSelectedPersonId] = useState<number | null>(null);
@@ -410,6 +411,20 @@ export default function MovieDetailModal({
       })
       .catch((err) => console.log("Note: Trivia backend quota fallback active."))
       .finally(() => setIsLoadingTrivia(false));
+
+    // 3. Fetch Ratings
+    fetch(`/api/movie-ratings?title=${encodeURIComponent(movie.title)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setExternalRatings({
+            imdb: data.imdbRating,
+            rottenTomatoes: data.rottenTomatoes,
+            metacritic: data.metacritic
+          });
+        }
+      })
+      .catch((err) => console.error("Error fetching ratings:", err));
   }, [movie]);
 
   // Load TV Season Episodes automatically when season changes
@@ -686,6 +701,13 @@ export default function MovieDetailModal({
                     <Star className="h-3 w-3 xs:h-4 xs:w-4 fill-[#f59e0b] text-[#f59e0b]" />
                     {activeMovie.rating ? activeMovie.rating.toFixed(1) : "7.0"} <span className="text-zinc-500 font-normal">/ 10</span>
                   </span>
+                  {externalRatings && (
+                    <div className="flex gap-2 text-[8px] sm:text-[10px] text-zinc-400 font-mono border-l border-zinc-700 pl-2 ml-1">
+                      {externalRatings.imdb !== 'N/A' && <span>IMDb: {externalRatings.imdb}</span>}
+                      {externalRatings.rottenTomatoes !== 'N/A' && <span>RT: {externalRatings.rottenTomatoes}</span>}
+                      {externalRatings.metacritic !== 'N/A' && <span>MC: {externalRatings.metacritic}</span>}
+                    </div>
+                  )}
                   {activeMovie.voteCount && activeMovie.voteCount > 0 && (
                     <span className="text-zinc-500 text-[8px] xs:text-[10px]">({activeMovie.voteCount.toLocaleString()} votes)</span>
                   )}

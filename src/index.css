@@ -194,7 +194,11 @@ body {
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring/50 select-none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  input, textarea {
+    @apply select-text;
   }
   body {
     @apply bg-background text-foreground;

@@ -59,12 +59,12 @@ export default function GenreCloud({ genres, selectedGenre, onGenreSelect }: Gen
         variants={container}
         initial="hidden"
         animate="show"
-        className="grid grid-cols-3 xs:grid-cols-4 sm:flex sm:flex-wrap gap-2 sm:gap-2.5"
+        className="flex flex-row overflow-x-auto gap-2 pb-2 sm:flex sm:flex-wrap sm:gap-2.5"
       >
         <motion.button
           variants={item}
           onClick={() => onGenreSelect("All")}
-          className={`flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 sm:py-2 rounded-lg sm:rounded-full text-[9px] sm:text-xs font-bold transition-all cursor-pointer border ${
+          className={`flex-shrink-0 flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 sm:py-2 rounded-lg sm:rounded-full text-[9px] sm:text-xs font-bold transition-all cursor-pointer border ${
             selectedGenre === "All"
               ? "bg-[#ff4e00] border-[#ff4e00] text-white shadow-lg shadow-[#ff4e00]/20"
               : "bg-white/5 border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"
@@ -79,7 +79,7 @@ export default function GenreCloud({ genres, selectedGenre, onGenreSelect }: Gen
             key={genre}
             variants={item}
             onClick={() => onGenreSelect(genre)}
-            className={`flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 sm:py-2 rounded-lg sm:rounded-full text-[9px] sm:text-xs font-bold transition-all cursor-pointer border ${
+            className={`flex-shrink-0 flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 sm:py-2 rounded-lg sm:rounded-full text-[9px] sm:text-xs font-bold transition-all cursor-pointer border ${
               selectedGenre === genre
                 ? "bg-[#ff4e00] border-[#ff4e00] text-white shadow-lg shadow-[#ff4e00]/20"
                 : "bg-white/5 border-white/10 text-zinc-400 hover:border-white/20 hover:text-white"

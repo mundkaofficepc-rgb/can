@@ -665,6 +665,43 @@ app.get("/api/details", async (req, res) => {
   }
 });
 
+// GET EXTERNAL MOVIE RATINGS
+app.get("/api/movie-ratings", async (req, res) => {
+  const { title } = req.query;
+  if (!title) {
+    return res.status(400).json({ error: "Title is required" });
+  }
+
+  const OMDB_API_KEY = process.env.OMDB_API_KEY;
+  if (!OMDB_API_KEY) {
+    return res.status(503).json({ success: false, error: "OMDB_API_KEY is not configured" });
+  }
+
+  try {
+    const url = `https://www.omdbapi.com/?t=${encodeURIComponent(title as string)}&apikey=${OMDB_API_KEY}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`OMDB returned status ${response.status}`);
+    }
+    const data: any = await response.json();
+    if (data.Response === "False") {
+      return res.json({ success: false, error: data.Error });
+    }
+    
+    // Extract ratings
+    const ratings = data.Ratings || [];
+    return res.json({
+      success: true,
+      imdbRating: data.imdbRating,
+      rottenTomatoes: ratings.find((r: any) => r.Source === "Rotten Tomatoes")?.Value || "N/A",
+      metacritic: ratings.find((r: any) => r.Source === "Metacritic")?.Value || "N/A"
+    });
+  } catch (err) {
+    console.error("Failed to fetch OMDB ratings:", err);
+    res.status(500).json({ success: false, error: "Failed to fetch ratings" });
+  }
+});
+
 // GET PERSON DETAILS WITH FILMOGRAPHY
 app.get("/api/person", async (req, res) => {
   const { id } = req.query;
